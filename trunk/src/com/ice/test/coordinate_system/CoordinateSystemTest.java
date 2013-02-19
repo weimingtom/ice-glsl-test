@@ -162,7 +162,7 @@ public class CoordinateSystemTest extends TestCase {
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
-            program.getVertexShader().bindUniform("aModelViewProjectMatrix", M_V_P_MATRIX);
+            program.getVertexShader().uploadUniform("aModelViewProjectMatrix", M_V_P_MATRIX);
         }
 
     }

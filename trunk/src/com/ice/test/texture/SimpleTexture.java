@@ -175,7 +175,7 @@ public class SimpleTexture extends TestCase {
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
-            program.getVertexShader().bindUniform("u_MVPMatrix", M_V_P_MATRIX);
+            program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
         }
 
     }
