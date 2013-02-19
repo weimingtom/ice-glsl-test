@@ -57,7 +57,8 @@ public class PerFragmentLighting extends TestCase {
         Geometry geometryB;
 
         Geometry light;
-        float[] lightPosInWorldSpace = {2f, 0, 0, 0};
+        //齐次坐标 lightPosInWorldSpace[3]取1
+        float[] lightPosInWorldSpace = {2f, 0, 0, 1};
         float[] lightPosInEyeSpace = new float[4];
 
         @Override
@@ -136,7 +137,7 @@ public class PerFragmentLighting extends TestCase {
             long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
-            drawLight(angleInDegrees);
+            updateLight(angleInDegrees);
 
             geometryA.attach();
             styleA(angleInDegrees, geometryA);
@@ -148,12 +149,12 @@ public class PerFragmentLighting extends TestCase {
             geometryB.detach();
         }
 
-        private void drawLight(float angleInDegrees) {
+        private void updateLight(float angleInDegrees) {
             light.attach();
 
             float[] modelMatrix = light.selfCoordinateSystem();
             Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0, 1, 0);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 1, 1, 1);
 
             CoordinateSystem coordinateSystem = light.getCoordinateSystem();
 
@@ -161,7 +162,9 @@ public class PerFragmentLighting extends TestCase {
 
             light.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
 
-            multiplyMV(lightPosInEyeSpace, 0, modelMatrix, 0, lightPosInWorldSpace, 0);
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+
+            multiplyMV(lightPosInEyeSpace, 0, M_V_MATRIX, 0, lightPosInWorldSpace, 0);
 
             light.draw();
 
