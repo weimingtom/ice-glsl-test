@@ -82,21 +82,21 @@ public class PerFragmentLighting extends TestCase {
             nameMap.put(NORMAL, "a_Normal");
             nameMap.put(TEXTURE_COORD, "a_TexCoordinate");
 
-            geometryA = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryA = new VBOGeometry(geometryData, vertexShader, fragmentShader);
+            ((VBOGeometry) geometryA).binder(nameMap);
             geometryA.setTexture(
                     new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
             );
-            geometryA.setFragmentShader(fragmentShader);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
-            geometryB = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryB = new VBOGeometry(geometryData, vertexShader, fragmentShader);
+            ((VBOGeometry) geometryB).binder(nameMap);
             Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
             );
-            geometryB.setFragmentShader(fragmentShader);
 
             lightGeometry();
         }

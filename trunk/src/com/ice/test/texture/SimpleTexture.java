@@ -69,7 +69,8 @@ public class SimpleTexture extends TestCase {
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            geometryA = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryA = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryA).binder(nameMap);
             geometryA.setTexture(
                     new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
             );
@@ -78,7 +79,8 @@ public class SimpleTexture extends TestCase {
                     getResources().openRawResource(R.raw.teaport)
             );
 
-            geometryB = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryB = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryB).binder(nameMap);
             Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
