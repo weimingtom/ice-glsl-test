@@ -52,7 +52,7 @@ public class PerVertexLighting extends TestCase {
         Geometry geometryB;
 
         Geometry light;
-        float[] lightPosInWorldSpace = {3, 0, 0, 0};
+        float[] lightPosInWorldSpace = {3, 0, 0, 1};
         float[] lightPosInEyeSpace = new float[4];
 
         @Override
