@@ -68,7 +68,7 @@ public class BlendTest extends TestCase {
         protected void onCreated(GL10 glUnused, EGLConfig config) {
             glClearColor(0, 0, 0, 1.0f);
 
-            glEnable(GL_DEPTH_TEST);
+            //glEnable(GL_DEPTH_TEST);
             //glEnable(GL_CULL_FACE);
 
             blend = BlendController.BLEND_S_ONE_D_ONE;
