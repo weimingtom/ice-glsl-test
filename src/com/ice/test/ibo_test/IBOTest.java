@@ -60,17 +60,17 @@ public class IBOTest extends TestCase {
             IndexedGeometryData byteGridData = createGridData(2, 2, 15, 15);
             IndexedGeometryData shortGridData = createGridData(2, 2, 255, 255);
 
-            byteGridData.getFormatDescriptor().setMode(GL_LINE_LOOP);
-            shortGridData.getFormatDescriptor().setMode(GL_LINE_STRIP);
+            byteGridData.getFormatDescriptor().setMode(GL_LINES);
+            shortGridData.getFormatDescriptor().setMode(GL_POINTS);
 
             Map<String, String> nameMap = new HashMap<String, String>();
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            byteIBOGeometry = new VBOGeometry(byteGridData, vertexShader);
-            ((VBOGeometry) byteIBOGeometry).binder(nameMap);
-
+            byteIBOGeometry = new IBOGeometry(byteGridData, vertexShader);
             shortIBOGeometry = new IBOGeometry(shortGridData, vertexShader);
+
+            ((VBOGeometry) byteIBOGeometry).binder(nameMap);
             ((VBOGeometry) shortIBOGeometry).binder(nameMap);
 
             BitmapTexture texture = new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2));
