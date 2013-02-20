@@ -4,8 +4,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.CoordinateSystem;
-import com.ice.graphics.SimpleGlobal;
+import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
@@ -21,7 +20,7 @@ import java.util.Map;
 
 import static android.graphics.BitmapFactory.decodeResource;
 import static android.opengl.GLES20.*;
-import static com.ice.graphics.CoordinateSystem.M_V_P_MATRIX;
+import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.geometry.GeometryDataFactory.createGridData;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
@@ -85,11 +84,11 @@ public class IBOTest extends TestCase {
             CoordinateSystem.Global global = CoordinateSystem.global();
 
             if (global == null) {
-                global = new SimpleGlobal();
+                global = new CoordinateSystem.SimpleGlobal();
                 CoordinateSystem.buildGlobal(global);
             }
 
-            SimpleGlobal simpleGlobal = (SimpleGlobal) global;
+            CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
         }

@@ -5,8 +5,7 @@ import android.opengl.Matrix;
 import android.os.SystemClock;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.CoordinateSystem;
-import com.ice.graphics.SimpleGlobal;
+import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.Geometry;
 import com.ice.graphics.geometry.GeometryData;
 import com.ice.graphics.geometry.GeometryDataFactory;
@@ -23,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static android.opengl.GLES20.*;
-import static com.ice.graphics.CoordinateSystem.M_V_P_MATRIX;
+import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.shader.ShaderBinder.COLOR;
 import static com.ice.graphics.shader.ShaderBinder.POSITION;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
@@ -79,11 +78,11 @@ public class CoordinateSystemTest extends TestCase {
             CoordinateSystem.Global global = CoordinateSystem.global();
 
             if (global == null) {
-                global = new SimpleGlobal();
+                global = new CoordinateSystem.SimpleGlobal();
                 CoordinateSystem.buildGlobal(global);
             }
 
-            SimpleGlobal simpleGlobal = (SimpleGlobal) global;
+            CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
             simpleGlobal.eye(19.9f);
             simpleGlobal.perspective(45, width / (float) height, 1, 20);
         }
