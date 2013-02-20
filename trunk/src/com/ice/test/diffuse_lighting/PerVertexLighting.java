@@ -52,7 +52,7 @@ public class PerVertexLighting extends TestCase {
         Geometry geometryB;
 
         Geometry light;
-        float[] lightPosInWorldSpace = {3, 0, 0, 1};
+        float[] lightPosInWorldSpace = {2, 0, 0, 1};
         float[] lightPosInEyeSpace = new float[4];
 
         @Override
@@ -142,7 +142,7 @@ public class PerVertexLighting extends TestCase {
 
             float[] modelMatrix = light.selfCoordinateSystem();
             Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0, 0, 1);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 1, 1, 1);
 
             CoordinateSystem coordinateSystem = light.getCoordinateSystem();
 
