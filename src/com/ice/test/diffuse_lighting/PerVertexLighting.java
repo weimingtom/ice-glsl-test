@@ -76,13 +76,15 @@ public class PerVertexLighting extends TestCase {
             nameMap.put(ShaderBinder.COLOR, "a_Color");
             nameMap.put(ShaderBinder.NORMAL, "a_Normal");
 
-            geometryA = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryA = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryA).binder(nameMap);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
 
-            geometryB = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryB = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryB).binder(nameMap);
 
             lightGeometry();
         }

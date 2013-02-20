@@ -62,12 +62,14 @@ public class CoordinateSystemTest extends TestCase {
             nameMap.put(POSITION, "aPosition");
             nameMap.put(COLOR, "aColor");
 
-            geometryA = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryA = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryA).binder(nameMap);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
-            geometryB = new VBOGeometry(geometryData, vertexShader, nameMap);
+            geometryB = new VBOGeometry(geometryData, vertexShader);
+            ((VBOGeometry) geometryB).binder(nameMap);
         }
 
         @Override

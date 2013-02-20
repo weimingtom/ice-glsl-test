@@ -67,8 +67,12 @@ public class IBOTest extends TestCase {
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            byteIBOGeometry = new IBOGeometry(byteGridData, vertexShader, nameMap);
-            shortIBOGeometry = new IBOGeometry(shortGridData, vertexShader, nameMap);
+            byteIBOGeometry = new VBOGeometry(byteGridData, vertexShader);
+            ((VBOGeometry) byteIBOGeometry).binder(nameMap);
+
+            shortIBOGeometry = new IBOGeometry(shortGridData, vertexShader);
+            ((VBOGeometry) shortIBOGeometry).binder(nameMap);
+
             BitmapTexture texture = new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2));
             byteIBOGeometry.setTexture(texture);
             shortIBOGeometry.setTexture(texture);
