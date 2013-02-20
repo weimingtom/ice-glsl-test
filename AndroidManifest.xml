@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        package="com.ice.test"
-        android:versionCode="1"
-        android:versionName="1.0">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ice.test"
+    android:versionCode="1"
+    android:versionName="1.0">
 
     <uses-sdk
-            android:minSdkVersion="15"
-            android:targetSdkVersion="15"/>
+        android:minSdkVersion="15"
+        android:targetSdkVersion="15"/>
 
     <application
-            android:label="@string/app_name"
-            android:icon="@drawable/ic_launcher">
+        android:label="@string/app_name"
+        android:icon="@drawable/ic_launcher">
 
         <activity
-                android:name=".TableOfContents"
-                android:label="@string/app_name">
+            android:name=".TableOfContents"
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -44,6 +44,13 @@
         </activity>
 
         <activity android:name=".diffuse_lighting.PerFragmentLighting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.ICE"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".blend.BlendTest">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.ICE"/>
