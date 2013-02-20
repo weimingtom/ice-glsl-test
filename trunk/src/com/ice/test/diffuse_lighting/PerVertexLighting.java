@@ -4,8 +4,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.CoordinateSystem;
-import com.ice.graphics.SimpleGlobal;
+import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.Geometry;
 import com.ice.graphics.geometry.GeometryData;
 import com.ice.graphics.geometry.GeometryDataFactory;
@@ -25,7 +24,7 @@ import java.util.Map;
 import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
 import static android.opengl.Matrix.multiplyMV;
-import static com.ice.graphics.CoordinateSystem.*;
+import static com.ice.graphics.geometry.CoordinateSystem.*;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
@@ -107,11 +106,11 @@ public class PerVertexLighting extends TestCase {
             CoordinateSystem.Global global = global();
 
             if (global == null) {
-                global = new SimpleGlobal();
+                global = new CoordinateSystem.SimpleGlobal();
                 CoordinateSystem.buildGlobal(global);
             }
 
-            SimpleGlobal simpleGlobal = (SimpleGlobal) global;
+            CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
         }
