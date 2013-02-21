@@ -26,11 +26,8 @@ void main(){
   diffuse = diffuse * (1.0 / (1.0 + (0.01 * distance * distance)));
 
   // Multiply the color by the illumination level. It will be interpolated across the triangle.
-  if(a_Color.r==0.0&&a_Color.g==0.0&&a_Color.b==0.0){
-          v_Color = vec4(1.0,0,0,1) * diffuse;
-  }else{
      v_Color = a_Color * diffuse;
-  }
+
   // gl_Position is a special variable used to store the final position.
   // Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
   gl_Position = u_MVPMatrix * a_Position;

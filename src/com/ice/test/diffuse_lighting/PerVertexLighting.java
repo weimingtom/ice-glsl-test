@@ -4,22 +4,15 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.geometry.CoordinateSystem;
-import com.ice.graphics.geometry.Geometry;
-import com.ice.graphics.geometry.GeometryData;
-import com.ice.graphics.geometry.GeometryDataFactory;
-import com.ice.graphics.geometry.VBOGeometry;
+import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
-import com.ice.graphics.shader.ShaderBinder;
 import com.ice.graphics.shader.VertexShader;
 import com.ice.model.ObjLoader;
 import com.ice.test.R;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-import java.util.HashMap;
-import java.util.Map;
 
 import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
@@ -70,20 +63,12 @@ public class PerVertexLighting extends TestCase {
 
             GeometryData geometryData = GeometryDataFactory.createCubeData(1);
 
-            Map<String, String> nameMap = new HashMap<String, String>();
-            nameMap.put(ShaderBinder.POSITION, "a_Position");
-            nameMap.put(ShaderBinder.COLOR, "a_Color");
-            nameMap.put(ShaderBinder.NORMAL, "a_Normal");
-
             geometryA = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryA).binder(nameMap);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
-
             geometryB = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryB).binder(nameMap);
 
             lightGeometry();
         }
@@ -132,6 +117,12 @@ public class PerVertexLighting extends TestCase {
             geometryA.detach();
 
             geometryB.attach();
+
+            VertexShader vertexShader = geometryB.getVertexShader();
+            int colorAttribute = vertexShader.findAttribute("a_Color");
+            glDisableVertexAttribArray(colorAttribute);
+            vertexShader.uploadAttribute(colorAttribute, 0.7f, 0.6f, 0.0f, 1.0f);
+
             styleC(angleInDegrees, geometryB);
             geometryB.detach();
 
