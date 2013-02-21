@@ -4,7 +4,6 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
@@ -21,7 +20,7 @@ import java.util.Map;
 import static android.graphics.BitmapFactory.decodeResource;
 import static android.opengl.GLES20.*;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
-import static com.ice.graphics.geometry.GeometryDataFactory.createGridData;
+import static com.ice.graphics.geometry.GeometryDataFactory.createStripGridData;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 
@@ -48,6 +47,7 @@ public class IBOTest extends TestCase {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
 
             VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
             FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
@@ -56,11 +56,11 @@ public class IBOTest extends TestCase {
             program.attachShader(vertexShader, fragmentShader);
             program.link();
 
-            IndexedGeometryData byteGridData = createGridData(2, 2, 15, 15);
-            IndexedGeometryData shortGridData = createGridData(2, 2, 255, 255);
+            IndexedGeometryData byteGridData = createStripGridData(2, 2, 15, 15);
+            IndexedGeometryData shortGridData = createStripGridData(2, 2, 255, 255);
 
-            byteGridData.getFormatDescriptor().setMode(GL_LINES);
-            shortGridData.getFormatDescriptor().setMode(GL_POINTS);
+            byteGridData.getFormatDescriptor().setMode(GL_LINE_STRIP);
+            //shortGridData.getFormatDescriptor().setMode(GL_POINTS);
 
             Map<String, String> nameMap = new HashMap<String, String>();
             nameMap.put(ShaderBinder.POSITION, "a_Position");
