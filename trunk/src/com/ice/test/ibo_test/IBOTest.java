@@ -60,7 +60,6 @@ public class IBOTest extends TestCase {
             IndexedGeometryData shortGridData = createStripGridData(2, 2, 255, 255);
 
             byteGridData.getFormatDescriptor().setMode(GL_LINE_STRIP);
-            //shortGridData.getFormatDescriptor().setMode(GL_POINTS);
 
             Map<String, String> nameMap = new HashMap<String, String>();
             nameMap.put(ShaderBinder.POSITION, "a_Position");
@@ -102,7 +101,7 @@ public class IBOTest extends TestCase {
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
             byteIBOGeometry.attach();
-            styleA(angleInDegrees, byteIBOGeometry);
+            styleA(byteIBOGeometry);
             byteIBOGeometry.detach();
 
             shortIBOGeometry.attach();
@@ -110,15 +109,7 @@ public class IBOTest extends TestCase {
             shortIBOGeometry.detach();
         }
 
-        private void styleA(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
-
-            Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    1.0f, 1.0f, 1.0f
-            );
+        private void styleA(Geometry geometry) {
             updateMVPMatrix(geometry);
 
             geometry.draw();
@@ -138,8 +129,14 @@ public class IBOTest extends TestCase {
 
             Matrix.rotateM(
                     modelMatrix, 0,
-                    angleInDegrees,
-                    1, 1, 1
+                    -angleInDegrees,
+                    0f, 0f, 1f
+            );
+
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees * 2,
+                    0, 1, 0
             );
 
             updateMVPMatrix(geometry);
