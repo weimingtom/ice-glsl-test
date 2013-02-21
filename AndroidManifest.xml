@@ -29,6 +29,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".constant_attribute_or_array.ConstantAttributeOrArray">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.ICE"/>
+            </intent-filter>
+        </activity>
+
         <activity android:name=".texture.SimpleTexture">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
