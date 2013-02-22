@@ -13,7 +13,6 @@ import com.ice.graphics.texture.BitmapTexture;
 import com.ice.test.R;
 
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +42,7 @@ public class IBOTest extends TestCase {
         private Program program;
 
         @Override
-        protected void onCreated(GL10 glUnused, EGLConfig config) {
+        protected void onCreated(EGLConfig config) {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
@@ -77,7 +76,7 @@ public class IBOTest extends TestCase {
         }
 
         @Override
-        protected void onChanged(GL10 glUnused, int width, int height) {
+        protected void onChanged(int width, int height) {
             glViewport(0, 0, width, height);
 
             CoordinateSystem.Global global = CoordinateSystem.global();
@@ -93,7 +92,7 @@ public class IBOTest extends TestCase {
         }
 
         @Override
-        protected void onFrame(GL10 glUnused) {
+        protected void onFrame() {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // Do a complete rotation every 10 seconds.
