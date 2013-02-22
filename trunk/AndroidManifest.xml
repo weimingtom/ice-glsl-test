@@ -9,9 +9,7 @@
         android:minSdkVersion="15"
         android:targetSdkVersion="15"/>
 
-    <application
-        android:label="@string/app_name"
-        android:icon="@drawable/ic_launcher">
+    <application android:label="@string/app_name">
 
         <activity
             android:name=".TableOfContents"
@@ -19,6 +17,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".WorkingWithNormalWidget">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.ICE"/>
             </intent-filter>
         </activity>
 
