@@ -43,14 +43,14 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".diffuse_lighting.PerVertexLighting">
+        <activity android:name=".light.diffuse_lighting.PerVertexLighting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.ICE"/>
             </intent-filter>
         </activity>
 
-        <activity android:name=".diffuse_lighting.PerFragmentLighting">
+        <activity android:name=".light.diffuse_lighting.PerFragmentLighting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.ICE"/>

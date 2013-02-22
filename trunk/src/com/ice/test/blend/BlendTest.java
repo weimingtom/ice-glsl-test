@@ -86,8 +86,10 @@ public class BlendTest extends TestCase {
             nameMap.put(NORMAL, "a_Normal");
             nameMap.put(TEXTURE_COORD, "a_TexCoordinate");
 
+            geometryData.getFormatDescriptor().namespace(nameMap);
+
             geometryA = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryA).binder(nameMap);
+
             geometryA.setTexture(
                     new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
             );
@@ -96,8 +98,10 @@ public class BlendTest extends TestCase {
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
+            geometryData.getFormatDescriptor().namespace(nameMap);
+
             geometryB = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryB).binder(nameMap);
+
             Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)

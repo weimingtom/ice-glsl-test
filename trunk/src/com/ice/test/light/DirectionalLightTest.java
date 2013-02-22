@@ -1,4 +1,4 @@
-package com.ice.test.diffuse_lighting;
+package com.ice.test.light;
 
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -23,12 +23,12 @@ import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 
 /**
- * User: Jason
- * Date: 13-2-12
+ * User: jason
+ * Date: 13-2-22
  */
-public class PerVertexLighting extends TestCase {
-    private static final String VERTEX_SRC = "per_vertex_lighting/vertex.glsl";
-    private static final String FRAGMENT_SRC = "per_vertex_lighting/fragment.glsl";
+public class DirectionalLightTest extends TestCase {
+    private static final String VERTEX_SRC = "directional_light/per_vertex/vertex.glsl";
+    private static final String FRAGMENT_SRC = "directional_light/per_vertex/fragment.glsl";
 
     private static final String POINT_VERTEX_SRC = "point/vertex.glsl";
     private static final String POINT_FRAGMENT_SRC = "point/fragment.glsl";
@@ -70,6 +70,8 @@ public class PerVertexLighting extends TestCase {
             );
             geometryB = new VBOGeometry(geometryData, vertexShader);
 
+            geometryA.setBinder(new DirectionalLightBinder((VBOGeometry) geometryA));
+
             lightGeometry();
         }
 
@@ -99,7 +101,6 @@ public class PerVertexLighting extends TestCase {
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
         }
-
 
         @Override
         protected void onFrame(GL10 glUnused) {
