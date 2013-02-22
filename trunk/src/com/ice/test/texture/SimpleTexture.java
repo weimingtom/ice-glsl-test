@@ -38,6 +38,7 @@ public class SimpleTexture extends TestCase {
 
     private class Renderer extends AbstractRenderer {
         Program program;
+        Geometry panle;
         Geometry geometryA;
         Geometry geometryB;
 
@@ -46,7 +47,7 @@ public class SimpleTexture extends TestCase {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
-            glEnable(GL_CULL_FACE);
+            //glEnable(GL_CULL_FACE);
 
             VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
             FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
@@ -55,14 +56,12 @@ public class SimpleTexture extends TestCase {
             program.attachShader(vsh, fsh);
             program.link();
 
-            GeometryData geometryData = GeometryDataFactory.createCubeData(1);
-
             Map<String, String> nameMap = new HashMap<String, String>();
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
+            GeometryData geometryData = GeometryDataFactory.createCubeData(1);
             geometryData.getFormatDescriptor().namespace(nameMap);
-
             geometryA = new VBOGeometry(geometryData, vsh);
             geometryA.setTexture(
                     new BitmapTexture(bitmap(R.drawable.freshfruit2))
@@ -70,13 +69,18 @@ public class SimpleTexture extends TestCase {
 
             geometryData = ObjLoader.loadObj(openRaw(R.raw.teaport));
             geometryData.getFormatDescriptor().namespace(nameMap);
-
             geometryB = new VBOGeometry(geometryData, vsh);
             Bitmap bitmap = bitmap(R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
             );
 
+            geometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
+            geometryData.getFormatDescriptor().namespace(nameMap);
+            panle = new VBOGeometry(geometryData, vsh);
+            panle.setTexture(
+                    new BitmapTexture(bitmap(R.drawable.poker_back))
+            );
         }
 
         @Override
@@ -93,6 +97,15 @@ public class SimpleTexture extends TestCase {
             CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
+
+
+            float[] viewMatrix = simpleGlobal.viewMatrix();
+
+            Matrix.rotateM(
+                    viewMatrix, 0,
+                    -60,
+                    1.0f, 0, 0
+            );
         }
 
 
@@ -112,16 +125,32 @@ public class SimpleTexture extends TestCase {
             geometryB.attach();
             styleC(angleInDegrees, geometryB);
             geometryB.detach();
+
+            drawPanel();
+        }
+
+        private void drawPanel() {
+            panle.attach();
+
+            updateMVPMatrix(panle);
+
+            panle.draw();
+
+            panle.detach();
         }
 
         private void styleA(float angleInDegrees, Geometry geometry) {
             float[] modelMatrix = geometry.selfCoordinateSystem();
 
             Matrix.setIdentityM(modelMatrix, 0);
+            Matrix.translateM(
+                    modelMatrix, 0,
+                    0, 0, 0.5f
+            );
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    1.0f, 1.0f, 1.0f
+                    0f, 0f, 1.0f
             );
             updateMVPMatrix(geometry);
             geometry.draw();
@@ -135,7 +164,7 @@ public class SimpleTexture extends TestCase {
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    1.0f, 1.0f, 1.0f
+                    0f, 0f, 1.0f
             );
             updateMVPMatrix(geometry);
             geometry.draw();
@@ -145,10 +174,17 @@ public class SimpleTexture extends TestCase {
             float[] modelMatrix = geometry.selfCoordinateSystem();
 
             Matrix.setIdentityM(modelMatrix, 0);
+
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    90,
+                    1, 0f, 0
+            );
+
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    0f, 0f, 1f
+                    0, 1.0f, 0
             );
 
             Matrix.translateM(modelMatrix, 0, 1.5f, 0, 0);
@@ -156,7 +192,7 @@ public class SimpleTexture extends TestCase {
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    1, 1, 1
+                    0, 1, 0
             );
 
             updateMVPMatrix(geometry);
