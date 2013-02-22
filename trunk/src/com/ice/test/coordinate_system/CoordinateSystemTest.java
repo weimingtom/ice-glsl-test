@@ -3,13 +3,9 @@ package com.ice.test.coordinate_system;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.SystemClock;
-import com.ice.common.AbstractRenderer;
-import com.ice.common.TestCase;
-import com.ice.graphics.geometry.CoordinateSystem;
-import com.ice.graphics.geometry.Geometry;
-import com.ice.graphics.geometry.GeometryData;
-import com.ice.graphics.geometry.GeometryDataFactory;
-import com.ice.graphics.geometry.VBOGeometry;
+import com.ice.engine.AbstractRenderer;
+import com.ice.engine.TestCase;
+import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
@@ -21,11 +17,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static android.opengl.GLES20.*;
+import static com.ice.engine.Res.assetSting;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.shader.ShaderBinder.COLOR;
 import static com.ice.graphics.shader.ShaderBinder.POSITION;
-import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
-import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 
 public class CoordinateSystemTest extends TestCase {
     private static final String VERTEX_SRC = "coordinate_system/vertex.glsl";
@@ -47,11 +42,11 @@ public class CoordinateSystemTest extends TestCase {
 
             glEnable(GL_DEPTH_TEST);
 
-            VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
 
             program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            program.attachShader(vsh, fsh);
             program.link();
 
             GeometryData geometryData = GeometryDataFactory.createTriangleData(3);
@@ -62,14 +57,14 @@ public class CoordinateSystemTest extends TestCase {
 
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryA = new VBOGeometry(geometryData, vertexShader);
+            geometryA = new VBOGeometry(geometryData, vsh);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryB = new VBOGeometry(geometryData, vertexShader);
+            geometryB = new VBOGeometry(geometryData, vsh);
         }
 
         @Override

@@ -3,13 +3,9 @@ package com.ice.test.blend;
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import com.ice.common.AbstractRenderer;
-import com.ice.common.TestCase;
-import com.ice.graphics.geometry.CoordinateSystem;
-import com.ice.graphics.geometry.Geometry;
-import com.ice.graphics.geometry.GeometryData;
-import com.ice.graphics.geometry.GeometryDataFactory;
-import com.ice.graphics.geometry.VBOGeometry;
+import com.ice.engine.AbstractRenderer;
+import com.ice.engine.TestCase;
+import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
@@ -27,12 +23,11 @@ import static android.graphics.BitmapFactory.decodeResource;
 import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
 import static android.opengl.Matrix.multiplyMV;
+import static com.ice.engine.Res.assetSting;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
 import static com.ice.graphics.shader.ShaderBinder.*;
-import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
-import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
 
 /**
@@ -71,11 +66,11 @@ public class BlendTest extends TestCase {
 
             blend = BlendController.BLEND_S_ONE_D_ONE;
 
-            VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
 
             program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            program.attachShader(vsh, fsh);
             program.link();
 
             GeometryData geometryData = GeometryDataFactory.createCubeData(1);
@@ -87,39 +82,39 @@ public class BlendTest extends TestCase {
 
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryA = new VBOGeometry(geometryData, vertexShader);
+            geometryA = new VBOGeometry(geometryData, vsh);
 
             geometryA.setTexture(
                     new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
             );
-            geometryA.setFragmentShader(fragmentShader);
+            geometryA.setFragmentShader(fsh);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryB = new VBOGeometry(geometryData, vertexShader);
+            geometryB = new VBOGeometry(geometryData, vsh);
 
             Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
             );
-            geometryB.setFragmentShader(fragmentShader);
+            geometryB.setFragmentShader(fsh);
 
             lightGeometry();
         }
 
         private void lightGeometry() {
-            VertexShader vertexShader = vertexShader(getAssets(), POINT_VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), POINT_FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(POINT_VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(POINT_FRAGMENT_SRC));
 
             Program program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            program.attachShader(vsh, fsh);
             program.link();
 
             GeometryData pointData = createPointData(lightPosInWorldSpace, WHITE, 10);
-            light = new VBOGeometry(pointData, vertexShader);
+            light = new VBOGeometry(pointData, vsh);
         }
 
         @Override
