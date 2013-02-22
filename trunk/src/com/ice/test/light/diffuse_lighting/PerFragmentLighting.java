@@ -1,5 +1,6 @@
 package com.ice.test.light.diffuse_lighting;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -46,10 +47,11 @@ public class PerFragmentLighting extends TestCase {
 
     @Override
     protected GLSurfaceView.Renderer buildRenderer() {
-        return new Renderer();
+        return new Renderer(this);
     }
 
-    private class Renderer extends AbstractRenderer {
+    public static class Renderer extends AbstractRenderer {
+        Context context;
         Program program;
         Geometry geometryA;
         Geometry geometryB;
@@ -59,6 +61,10 @@ public class PerFragmentLighting extends TestCase {
         float[] lightPosInWorldSpace = {2f, 0, 0, 1};
         float[] lightPosInEyeSpace = new float[4];
 
+        public Renderer(Context context) {
+            this.context = context;
+        }
+
         @Override
         protected void onCreated(EGLConfig config) {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -66,8 +72,8 @@ public class PerFragmentLighting extends TestCase {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
 
-            VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
+            VertexShader vertexShader = vertexShader(context.getAssets(), VERTEX_SRC);
+            FragmentShader fragmentShader = fragmentShader(context.getAssets(), FRAGMENT_SRC);
 
             program = new Program();
             program.attachShader(vertexShader, fragmentShader);
@@ -84,16 +90,16 @@ public class PerFragmentLighting extends TestCase {
 
             geometryA = new VBOGeometry(geometryData, vertexShader, fragmentShader);
             geometryA.setTexture(
-                    new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
+                    new BitmapTexture(decodeResource(context.getResources(), R.drawable.freshfruit2))
             );
 
             geometryData = ObjLoader.loadObj(
-                    getResources().openRawResource(R.raw.teaport)
+                    context.getResources().openRawResource(R.raw.teaport)
             );
             geometryData.getFormatDescriptor().namespace(nameMap);
 
             geometryB = new VBOGeometry(geometryData, vertexShader, fragmentShader);
-            Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
+            Bitmap bitmap = decodeResource(context.getResources(), R.drawable.mask1);
             geometryB.setTexture(
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
             );
@@ -102,8 +108,8 @@ public class PerFragmentLighting extends TestCase {
         }
 
         private void lightGeometry() {
-            VertexShader vertexShader = vertexShader(getAssets(), POINT_VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), POINT_FRAGMENT_SRC);
+            VertexShader vertexShader = vertexShader(context.getAssets(), POINT_VERTEX_SRC);
+            FragmentShader fragmentShader = fragmentShader(context.getAssets(), POINT_FRAGMENT_SRC);
 
             Program program = new Program();
             program.attachShader(vertexShader, fragmentShader);
