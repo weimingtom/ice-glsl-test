@@ -4,7 +4,8 @@ import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.widget.RelativeLayout;
-import com.ice.common.GlslSurfaceView;
+import com.ice.engine.GlslSurfaceView;
+import com.ice.engine.Res;
 import com.ice.test.light.diffuse_lighting.PerFragmentLighting;
 
 /**
@@ -18,6 +19,8 @@ public class WorkingWithNormalWidget extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Res.build(this);
 
         setContentView(R.layout.main);
 
@@ -39,6 +42,12 @@ public class WorkingWithNormalWidget extends Activity {
     protected void onPause() {
         glSurfaceView.onPause();
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Res.release();
+        super.onDestroy();
     }
 
 }

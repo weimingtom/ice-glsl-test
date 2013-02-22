@@ -2,9 +2,12 @@ package com.ice.test.ibo_test;
 
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import com.ice.common.AbstractRenderer;
-import com.ice.common.TestCase;
-import com.ice.graphics.geometry.*;
+import com.ice.engine.AbstractRenderer;
+import com.ice.engine.TestCase;
+import com.ice.graphics.geometry.CoordinateSystem;
+import com.ice.graphics.geometry.Geometry;
+import com.ice.graphics.geometry.IBOGeometry;
+import com.ice.graphics.geometry.IndexedGeometryData;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.ShaderBinder;
@@ -18,10 +21,9 @@ import java.util.Map;
 
 import static android.graphics.BitmapFactory.decodeResource;
 import static android.opengl.GLES20.*;
+import static com.ice.engine.Res.assetSting;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.geometry.GeometryDataFactory.createStripGridData;
-import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
-import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 
 /**
  * User: Jason
@@ -48,11 +50,11 @@ public class IBOTest extends TestCase {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
 
-            VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
 
             program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            program.attachShader(vsh, fsh);
             program.link();
 
             IndexedGeometryData byteGridData = createStripGridData(2, 2, 15, 15);
@@ -67,8 +69,8 @@ public class IBOTest extends TestCase {
             byteGridData.getFormatDescriptor().namespace(nameMap);
             shortGridData.getFormatDescriptor().namespace(nameMap);
 
-            byteIBOGeometry = new IBOGeometry(byteGridData, vertexShader);
-            shortIBOGeometry = new IBOGeometry(shortGridData, vertexShader);
+            byteIBOGeometry = new IBOGeometry(byteGridData, vsh);
+            shortIBOGeometry = new IBOGeometry(shortGridData, vsh);
 
             BitmapTexture texture = new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2));
             byteIBOGeometry.setTexture(texture);

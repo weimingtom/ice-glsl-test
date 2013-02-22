@@ -2,8 +2,8 @@ package com.ice.test.light;
 
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import com.ice.common.AbstractRenderer;
-import com.ice.common.TestCase;
+import com.ice.engine.AbstractRenderer;
+import com.ice.engine.TestCase;
 import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
@@ -16,10 +16,9 @@ import javax.microedition.khronos.egl.EGLConfig;
 import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
 import static android.opengl.Matrix.multiplyMV;
+import static com.ice.engine.Res.assetSting;
 import static com.ice.graphics.geometry.CoordinateSystem.*;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
-import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
-import static com.ice.graphics.shader.ShaderFactory.vertexShader;
 
 /**
  * User: jason
@@ -53,21 +52,21 @@ public class DirectionalLightTest extends TestCase {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
 
-            VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
 
-            program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            Program program = new Program();
+            program.attachShader(vsh, fsh);
             program.link();
 
             GeometryData geometryData = GeometryDataFactory.createCubeData(1);
 
-            geometryA = new VBOGeometry(geometryData, vertexShader);
+            geometryA = new VBOGeometry(geometryData, vsh);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
-            geometryB = new VBOGeometry(geometryData, vertexShader);
+            geometryB = new VBOGeometry(geometryData, vsh);
 
             geometryA.setBinder(new DirectionalLightBinder((VBOGeometry) geometryA));
 
@@ -75,14 +74,15 @@ public class DirectionalLightTest extends TestCase {
         }
 
         private void lightGeometry() {
-            VertexShader vertexShader = vertexShader(getAssets(), POINT_VERTEX_SRC);
-            FragmentShader fragmentShader = fragmentShader(getAssets(), POINT_FRAGMENT_SRC);
+            VertexShader vsh = new VertexShader(assetSting(POINT_VERTEX_SRC));
+            FragmentShader fsh = new FragmentShader(assetSting(POINT_FRAGMENT_SRC));
 
             Program program = new Program();
-            program.attachShader(vertexShader, fragmentShader);
+            program.attachShader(vsh, fsh);
             program.link();
+
             GeometryData pointData = createPointData(lightPosInWorldSpace, WHITE, 10);
-            light = new VBOGeometry(pointData, vertexShader);
+            light = new VBOGeometry(pointData, vsh);
         }
 
         @Override
