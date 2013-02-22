@@ -1,46 +1,34 @@
-package com.ice.test.diffuse_lighting;
+package com.ice.test.light.diffuse_lighting;
 
-import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
-import com.ice.graphics.geometry.CoordinateSystem;
-import com.ice.graphics.geometry.Geometry;
-import com.ice.graphics.geometry.GeometryData;
-import com.ice.graphics.geometry.GeometryDataFactory;
-import com.ice.graphics.geometry.VBOGeometry;
+import com.ice.graphics.geometry.*;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
-import com.ice.graphics.texture.BitmapTexture;
 import com.ice.model.ObjLoader;
 import com.ice.test.R;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-import java.util.HashMap;
-import java.util.Map;
 
-import static android.graphics.BitmapFactory.decodeResource;
 import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
 import static android.opengl.Matrix.multiplyMV;
-import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
-import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
+import static com.ice.graphics.geometry.CoordinateSystem.*;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
-import static com.ice.graphics.shader.ShaderBinder.*;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
-import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
 
 /**
  * User: Jason
  * Date: 13-2-12
  */
-public class PerFragmentLighting extends TestCase {
-    private static final String VERTEX_SRC = "per_fragment_lighting/vertex.glsl";
-    private static final String FRAGMENT_SRC = "per_fragment_lighting/fragment.glsl";
+public class PerVertexLighting extends TestCase {
+    private static final String VERTEX_SRC = "per_vertex_lighting/vertex.glsl";
+    private static final String FRAGMENT_SRC = "per_vertex_lighting/fragment.glsl";
 
     private static final String POINT_VERTEX_SRC = "point/vertex.glsl";
     private static final String POINT_FRAGMENT_SRC = "point/fragment.glsl";
@@ -56,8 +44,7 @@ public class PerFragmentLighting extends TestCase {
         Geometry geometryB;
 
         Geometry light;
-        //齐次坐标 lightPosInWorldSpace[3]取1
-        float[] lightPosInWorldSpace = {2f, 0, 0, 1};
+        float[] lightPosInWorldSpace = {2, 0, 0, 1};
         float[] lightPosInEyeSpace = new float[4];
 
         @Override
@@ -76,26 +63,12 @@ public class PerFragmentLighting extends TestCase {
 
             GeometryData geometryData = GeometryDataFactory.createCubeData(1);
 
-            Map<String, String> nameMap = new HashMap<String, String>();
-            nameMap.put(POSITION, "a_Position");
-            nameMap.put(NORMAL, "a_Normal");
-            nameMap.put(TEXTURE_COORD, "a_TexCoordinate");
-
-            geometryA = new VBOGeometry(geometryData, vertexShader, fragmentShader);
-            ((VBOGeometry) geometryA).binder(nameMap);
-            geometryA.setTexture(
-                    new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
-            );
+            geometryA = new VBOGeometry(geometryData, vertexShader);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
-            geometryB = new VBOGeometry(geometryData, vertexShader, fragmentShader);
-            ((VBOGeometry) geometryB).binder(nameMap);
-            Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
-            geometryB.setTexture(
-                    new BitmapTexture(bitmap, LINEAR_REPEAT)
-            );
+            geometryB = new VBOGeometry(geometryData, vertexShader);
 
             lightGeometry();
         }
@@ -107,7 +80,6 @@ public class PerFragmentLighting extends TestCase {
             Program program = new Program();
             program.attachShader(vertexShader, fragmentShader);
             program.link();
-
             GeometryData pointData = createPointData(lightPosInWorldSpace, WHITE, 10);
             light = new VBOGeometry(pointData, vertexShader);
         }
@@ -116,7 +88,7 @@ public class PerFragmentLighting extends TestCase {
         protected void onChanged(GL10 glUnused, int width, int height) {
             glViewport(0, 0, width, height);
 
-            CoordinateSystem.Global global = CoordinateSystem.global();
+            CoordinateSystem.Global global = global();
 
             if (global == null) {
                 global = new CoordinateSystem.SimpleGlobal();
@@ -128,6 +100,7 @@ public class PerFragmentLighting extends TestCase {
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
         }
 
+
         @Override
         protected void onFrame(GL10 glUnused) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -136,7 +109,7 @@ public class PerFragmentLighting extends TestCase {
             long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
-            updateLight(angleInDegrees);
+            drawLight(angleInDegrees);
 
             geometryA.attach();
             styleA(angleInDegrees, geometryA);
@@ -144,11 +117,19 @@ public class PerFragmentLighting extends TestCase {
             geometryA.detach();
 
             geometryB.attach();
+
+            VertexShader vertexShader = geometryB.getVertexShader();
+            int colorAttribute = vertexShader.findAttribute("a_Color");
+            glDisableVertexAttribArray(colorAttribute);
+            vertexShader.uploadAttribute(colorAttribute, 0.7f, 0.6f, 0.0f, 1.0f);
+
             styleC(angleInDegrees, geometryB);
             geometryB.detach();
+
+
         }
 
-        private void updateLight(float angleInDegrees) {
+        private void drawLight(float angleInDegrees) {
             light.attach();
 
             float[] modelMatrix = light.selfCoordinateSystem();
@@ -221,19 +202,16 @@ public class PerFragmentLighting extends TestCase {
 
         private void updateMVPMatrix(Geometry geometry) {
 
-            FragmentShader fragmentShader = program.getFragmentShader();
+            VertexShader vertexShader = program.getVertexShader();
 
-            fragmentShader.uploadUniform(
+            vertexShader.uploadUniform(
                     "u_LightPos",
                     lightPosInEyeSpace[0],
                     lightPosInEyeSpace[1],
                     lightPosInEyeSpace[2]
             );
 
-            fragmentShader.uploadUniform("u_Texture", 0);
-
             CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
-            VertexShader vertexShader = program.getVertexShader();
 
             coordinateSystem.modelViewMatrix(M_V_MATRIX);
             vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);

@@ -51,20 +51,21 @@ public class ConstantAttributeOrArray extends TestCase {
             program.attachShader(vertexShader, fragmentShader);
             program.link();
 
-            GeometryData geometryData = GeometryDataFactory.createTriangleData(3);
-
             Map<String, String> nameMap = new HashMap<String, String>();
             nameMap.put(POSITION, "aPosition");
             nameMap.put(COLOR, "aColor");
 
+            GeometryData geometryData = GeometryDataFactory.createTriangleData(3);
+            geometryData.getFormatDescriptor().namespace(nameMap);
+
             geometryA = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryA).binder(nameMap);
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
+            geometryData.getFormatDescriptor().namespace(nameMap);
+
             geometryB = new VBOGeometry(geometryData, vertexShader);
-            ((VBOGeometry) geometryB).binder(nameMap);
         }
 
         @Override

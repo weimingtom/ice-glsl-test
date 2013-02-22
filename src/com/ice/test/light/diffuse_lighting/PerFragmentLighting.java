@@ -1,8 +1,8 @@
-package com.ice.test.coordinate_system;
+package com.ice.test.light.diffuse_lighting;
 
+import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.SystemClock;
 import com.ice.common.AbstractRenderer;
 import com.ice.common.TestCase;
 import com.ice.graphics.geometry.CoordinateSystem;
@@ -13,6 +13,7 @@ import com.ice.graphics.geometry.VBOGeometry;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
+import com.ice.graphics.texture.BitmapTexture;
 import com.ice.model.ObjLoader;
 import com.ice.test.R;
 
@@ -21,16 +22,28 @@ import javax.microedition.khronos.opengles.GL10;
 import java.util.HashMap;
 import java.util.Map;
 
+import static android.graphics.BitmapFactory.decodeResource;
+import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
+import static android.opengl.Matrix.multiplyMV;
+import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
-import static com.ice.graphics.shader.ShaderBinder.COLOR;
-import static com.ice.graphics.shader.ShaderBinder.POSITION;
+import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
+import static com.ice.graphics.shader.ShaderBinder.*;
 import static com.ice.graphics.shader.ShaderFactory.fragmentShader;
 import static com.ice.graphics.shader.ShaderFactory.vertexShader;
+import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
 
-public class CoordinateSystemTest extends TestCase {
-    private static final String VERTEX_SRC = "coordinate_system/vertex.glsl";
-    private static final String FRAGMENT_SRC = "coordinate_system/fragment.glsl";
+/**
+ * User: Jason
+ * Date: 13-2-12
+ */
+public class PerFragmentLighting extends TestCase {
+    private static final String VERTEX_SRC = "per_fragment_lighting/vertex.glsl";
+    private static final String FRAGMENT_SRC = "per_fragment_lighting/fragment.glsl";
+
+    private static final String POINT_VERTEX_SRC = "point/vertex.glsl";
+    private static final String POINT_FRAGMENT_SRC = "point/fragment.glsl";
 
     @Override
     protected GLSurfaceView.Renderer buildRenderer() {
@@ -42,11 +55,17 @@ public class CoordinateSystemTest extends TestCase {
         Geometry geometryA;
         Geometry geometryB;
 
+        Geometry light;
+        //齐次坐标 lightPosInWorldSpace[3]取1
+        float[] lightPosInWorldSpace = {2f, 0, 0, 1};
+        float[] lightPosInEyeSpace = new float[4];
+
         @Override
         protected void onCreated(GL10 glUnused, EGLConfig config) {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
 
             VertexShader vertexShader = vertexShader(getAssets(), VERTEX_SRC);
             FragmentShader fragmentShader = fragmentShader(getAssets(), FRAGMENT_SRC);
@@ -55,22 +74,44 @@ public class CoordinateSystemTest extends TestCase {
             program.attachShader(vertexShader, fragmentShader);
             program.link();
 
-            GeometryData geometryData = GeometryDataFactory.createTriangleData(3);
+            GeometryData geometryData = GeometryDataFactory.createCubeData(1);
 
             Map<String, String> nameMap = new HashMap<String, String>();
-            nameMap.put(POSITION, "aPosition");
-            nameMap.put(COLOR, "aColor");
+            nameMap.put(POSITION, "a_Position");
+            nameMap.put(NORMAL, "a_Normal");
+            nameMap.put(TEXTURE_COORD, "a_TexCoordinate");
 
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryA = new VBOGeometry(geometryData, vertexShader);
+            geometryA = new VBOGeometry(geometryData, vertexShader, fragmentShader);
+            geometryA.setTexture(
+                    new BitmapTexture(decodeResource(getResources(), R.drawable.freshfruit2))
+            );
 
             geometryData = ObjLoader.loadObj(
                     getResources().openRawResource(R.raw.teaport)
             );
             geometryData.getFormatDescriptor().namespace(nameMap);
 
-            geometryB = new VBOGeometry(geometryData, vertexShader);
+            geometryB = new VBOGeometry(geometryData, vertexShader, fragmentShader);
+            Bitmap bitmap = decodeResource(getResources(), R.drawable.mask1);
+            geometryB.setTexture(
+                    new BitmapTexture(bitmap, LINEAR_REPEAT)
+            );
+
+            lightGeometry();
+        }
+
+        private void lightGeometry() {
+            VertexShader vertexShader = vertexShader(getAssets(), POINT_VERTEX_SRC);
+            FragmentShader fragmentShader = fragmentShader(getAssets(), POINT_FRAGMENT_SRC);
+
+            Program program = new Program();
+            program.attachShader(vertexShader, fragmentShader);
+            program.link();
+
+            GeometryData pointData = createPointData(lightPosInWorldSpace, WHITE, 10);
+            light = new VBOGeometry(pointData, vertexShader);
         }
 
         @Override
@@ -85,8 +126,8 @@ public class CoordinateSystemTest extends TestCase {
             }
 
             CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
-            simpleGlobal.eye(19.9f);
-            simpleGlobal.perspective(45, width / (float) height, 1, 20);
+            simpleGlobal.eye(6);
+            simpleGlobal.perspective(45, width / (float) height, 1, 10);
         }
 
         @Override
@@ -94,8 +135,10 @@ public class CoordinateSystemTest extends TestCase {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // Do a complete rotation every 10 seconds.
-            long time = SystemClock.uptimeMillis() % 10000L;
+            long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
+
+            updateLight(angleInDegrees);
 
             geometryA.attach();
             styleA(angleInDegrees, geometryA);
@@ -105,9 +148,29 @@ public class CoordinateSystemTest extends TestCase {
             geometryB.attach();
             styleC(angleInDegrees, geometryB);
             geometryB.detach();
-
         }
 
+        private void updateLight(float angleInDegrees) {
+            light.attach();
+
+            float[] modelMatrix = light.selfCoordinateSystem();
+            Matrix.setIdentityM(modelMatrix, 0);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 1, 1, 1);
+
+            CoordinateSystem coordinateSystem = light.getCoordinateSystem();
+
+            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+
+            light.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+
+            multiplyMV(lightPosInEyeSpace, 0, M_V_MATRIX, 0, lightPosInWorldSpace, 0);
+
+            light.draw();
+
+            light.detach();
+        }
 
         private void styleA(float angleInDegrees, Geometry geometry) {
             float[] modelMatrix = geometry.selfCoordinateSystem();
@@ -116,7 +179,7 @@ public class CoordinateSystemTest extends TestCase {
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    0f, 0f, 1.0f
+                    1.0f, 1.0f, 1.0f
             );
             updateMVPMatrix(geometry);
             geometry.draw();
@@ -126,11 +189,11 @@ public class CoordinateSystemTest extends TestCase {
             float[] modelMatrix = geometry.selfCoordinateSystem();
 
             Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.translateM(modelMatrix, 0, 4f, -4, 0);
+            Matrix.translateM(modelMatrix, 0, 1.5f, -1, 0);
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    0.0f, 0.0f, 1.0f
+                    1.0f, 1.0f, 1.0f
             );
             updateMVPMatrix(geometry);
             geometry.draw();
@@ -146,26 +209,39 @@ public class CoordinateSystemTest extends TestCase {
                     0f, 0f, 1f
             );
 
-            Matrix.translateM(modelMatrix, 0, 6f, 0, 0);
+            Matrix.translateM(modelMatrix, 0, 1.5f, 0, 0);
 
             Matrix.rotateM(
                     modelMatrix, 0,
                     angleInDegrees,
-                    0, 0, 1
+                    1, 1, 1
             );
 
             updateMVPMatrix(geometry);
-
             geometry.draw();
         }
 
         private void updateMVPMatrix(Geometry geometry) {
 
+            FragmentShader fragmentShader = program.getFragmentShader();
+
+            fragmentShader.uploadUniform(
+                    "u_LightPos",
+                    lightPosInEyeSpace[0],
+                    lightPosInEyeSpace[1],
+                    lightPosInEyeSpace[2]
+            );
+
+            fragmentShader.uploadUniform("u_Texture", 0);
+
             CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
+            VertexShader vertexShader = program.getVertexShader();
+
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+            vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
-
-            program.getVertexShader().uploadUniform("aModelViewProjectMatrix", M_V_P_MATRIX);
+            vertexShader.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
         }
 
     }
