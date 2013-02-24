@@ -5,6 +5,7 @@ import android.opengl.Matrix;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.geometry.*;
+import com.ice.graphics.shader.Attribute;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
@@ -118,9 +119,8 @@ public class PerVertexLighting extends TestCase {
             geometryB.attach();
 
             VertexShader vertexShader = geometryB.getVertexShader();
-            int colorAttribute = vertexShader.findAttribute("a_Color");
-            glDisableVertexAttribArray(colorAttribute);
-            vertexShader.uploadAttribute(colorAttribute, 0.7f, 0.6f, 0.0f, 1.0f);
+            Attribute colorAttribute = vertexShader.findAttribute("a_Color");
+            colorAttribute.upload(0.7f, 0.6f, 0.0f, 1.0f);
 
             styleC(angleInDegrees, geometryB);
             geometryB.detach();

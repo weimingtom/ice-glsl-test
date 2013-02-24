@@ -149,7 +149,8 @@ public class IBOTest extends TestCase {
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
-            program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+            VertexShader vsh = program.getVertexShader();
+            vsh.findUniform("u_MVPMatrix").upload(M_V_P_MATRIX);
         }
 
     }

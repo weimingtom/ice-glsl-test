@@ -6,6 +6,7 @@ import android.os.SystemClock;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.geometry.*;
+import com.ice.graphics.shader.Attribute;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.shader.VertexShader;
@@ -99,11 +100,9 @@ public class ConstantAttributeOrArray extends TestCase {
 
             VertexShader vertexShader = geometryB.getVertexShader();
 
-            int colorAttribute = vertexShader.findAttribute("aColor");
+            Attribute colorAttribute = vertexShader.findAttribute("aColor");
 
-            glDisableVertexAttribArray(colorAttribute);
-
-            vertexShader.uploadAttribute(colorAttribute, 0.5f, 0.6f, 0.5f, 1.0f);
+            colorAttribute.upload(0.5f, 0.6f, 0.5f, 1.0f);
 
             styleC(angleInDegrees, geometryB);
 
