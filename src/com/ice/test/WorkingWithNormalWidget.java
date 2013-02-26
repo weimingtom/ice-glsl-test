@@ -29,7 +29,7 @@ public class WorkingWithNormalWidget extends Activity {
 
         RelativeLayout rootView = (RelativeLayout) findViewById(R.id.root);
 
-        rootView.addView(glSurfaceView, 0);
+        rootView.addView(glSurfaceView);
     }
 
     @Override
