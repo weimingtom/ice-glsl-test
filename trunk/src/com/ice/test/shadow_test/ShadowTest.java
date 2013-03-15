@@ -1,4 +1,4 @@
-package com.ice.test.fbo;
+package com.ice.test.shadow_test;
 
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
@@ -30,7 +30,7 @@ import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
  * User: Jason
  * Date: 13-2-12
  */
-public class SimpleFbo extends TestCase {
+public class ShadowTest extends TestCase {
     private static final String VERTEX_SRC = "texture/vertex.glsl";
     private static final String FRAGMENT_SRC = "texture/fragment.glsl";
 
