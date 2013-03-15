@@ -10,8 +10,6 @@ varying vec2 v_TexCoordinate;
 void main()                    		
 {                              
 
-    //vec3 reverseLightDir=vec3(-u_LightVector.x,-u_LightVector.y,-u_LightVector.z);
-
    vec3 normalLightDir= normalize(u_LightVector);
 
 	// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are

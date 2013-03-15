@@ -46,8 +46,8 @@ public class DirectionalLightTest extends TestCase {
         Geometry geometryA;
         Geometry geometryB;
         Geometry light;
-        float[] lightPosInSelfSpace = {0, 2, 1, 1};
-        float[] lightVectorInWorldSpace = new float[4];
+        float[] lightPosInSelfSpace = {0, 2, 1.2f, 1};
+        float[] lightVectorInViewSpace = new float[4];
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -113,14 +113,13 @@ public class DirectionalLightTest extends TestCase {
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
 
+            float[] viewMatrix = simpleGlobal.viewMatrix();
 
-//            float[] viewMatrix = simpleGlobal.viewMatrix();
-//
-//            Matrix.rotateM(
-//                    viewMatrix, 0,
-//                    -60,
-//                    1.0f, 0, 0
-//            );
+            Matrix.rotateM(
+                    viewMatrix, 0,
+                    -60,
+                    1.0f, 0, 0
+            );
         }
 
         @Override
@@ -145,15 +144,14 @@ public class DirectionalLightTest extends TestCase {
                     0
             };
 
-            multiplyMV(lightVectorInWorldSpace, 0, light.getCoordinateSystem().modelMatrix(), 0, dir, 0);
+            multiplyMV(lightVectorInViewSpace, 0, M_V_MATRIX, 0, dir, 0);
 
             fragmentShader.uploadUniform(
                     "u_LightVector",
-                    lightVectorInWorldSpace[0],
-                    lightVectorInWorldSpace[1],
-                    lightVectorInWorldSpace[2]
+                    lightVectorInViewSpace[0],
+                    lightVectorInViewSpace[1],
+                    lightVectorInViewSpace[2]
             );
-
 
             geometryA.attach();
             styleA(angleInDegrees, geometryA);
@@ -203,11 +201,11 @@ public class DirectionalLightTest extends TestCase {
                     modelMatrix, 0,
                     0, 0, 0.5f
             );
-//            Matrix.rotateM(
-//                    modelMatrix, 0,
-//                    angleInDegrees,
-//                    0f, 0f, 1.0f
-//            );
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0f, 0f, 1.0f
+            );
             updateMVPMatrix(geometry);
             geometry.draw();
         }
@@ -217,11 +215,11 @@ public class DirectionalLightTest extends TestCase {
 
             Matrix.setIdentityM(modelMatrix, 0);
             Matrix.translateM(modelMatrix, 0, 1.5f, -1, 0);
-//            Matrix.rotateM(
-//                    modelMatrix, 0,
-//                    angleInDegrees,
-//                    0f, 0f, 1.0f
-//            );
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0f, 0f, 1.0f
+            );
             updateMVPMatrix(geometry);
             geometry.draw();
         }
@@ -237,19 +235,19 @@ public class DirectionalLightTest extends TestCase {
                     1, 0.0f, 0
             );
 
-//            Matrix.rotateM(
-//                    modelMatrix, 0,
-//                    angleInDegrees,
-//                    0, 1.0f, 0
-//            );
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0, 1.0f, 0
+            );
 
             Matrix.translateM(modelMatrix, 0, -1.5f, 0, 0);
 
-//            Matrix.rotateM(
-//                    modelMatrix, 0,
-//                    angleInDegrees,
-//                    0, 1, 0
-//            );
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0, 1, 0
+            );
 
             updateMVPMatrix(geometry);
             geometry.draw();
@@ -260,10 +258,10 @@ public class DirectionalLightTest extends TestCase {
 
             CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
 
-            vertexShader.uploadUniform("u_MMatrix", coordinateSystem.modelMatrix());
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+            vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
-
             vertexShader.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
         }
 
