@@ -76,6 +76,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".fbo.SimpleFbo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.ICE"/>
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>
