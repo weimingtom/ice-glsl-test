@@ -8,7 +8,6 @@ import com.ice.graphics.FBO;
 import com.ice.graphics.VBO;
 import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.GeometryData;
-import com.ice.graphics.geometry.IndexedGeometryData;
 import com.ice.graphics.geometry.VBOGeometry;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
@@ -30,6 +29,7 @@ import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
 import static com.ice.graphics.geometry.GeometryDataFactory.createStripGridData;
+import static com.ice.graphics.shader.ShaderBinder.POSITION;
 import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
 import static com.ice.model.ObjLoader.loadObj;
 
@@ -56,17 +56,16 @@ public class ShadowTest extends TestCase {
 
     private class Renderer extends AbstractRenderer {
         VBO vbo, plane, light;
-        Program normalProgram, pointProgram;
+        Program normalProgram, pointProgram, depthProgram;
 
-        private FBO fbo;
-        private FboTexture fboTexture;
-        private Texture textureA, textureB;
+        FBO fbo;
+        FboTexture fboTexture;
+        Texture textureA, textureB;
 
         float[] lightPosInSelfSpace = {0, 1.5f, 1.2f, 1};
         float[] lightVectorInViewSpace = new float[4];
-        private GeometryData vboData;
-        private IndexedGeometryData planeData;
-        private VBOGeometry.EasyBinder vboBinder, planeBinder;
+        GeometryData vboData, planeData;
+        VBOGeometry.EasyBinder vboBinder, planeBinder;
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -97,41 +96,7 @@ public class ShadowTest extends TestCase {
 
             fboTexture = new FboTexture(768, 920);
 
-            checkError();
-            //fbo();
-        }
-
-        private void programs() {
-            normalProgram = new Program();
-            normalProgram.attachShader(
-                    new VertexShader(assetSting(VERTEX_SRC)),
-                    new FragmentShader(assetSting(FRAGMENT_SRC))
-            );
-            normalProgram.link();
-
-            pointProgram = new Program();
-            VertexShader vsh = new VertexShader(assetSting(POINT_VERTEX_SRC));
-            pointProgram.attachShader(
-                    vsh,
-                    new FragmentShader(assetSting(POINT_FRAGMENT_SRC))
-            );
-            pointProgram.link();
-        }
-
-        private void fbo() {
-            fbo = new FBO();
-            fbo.attach();
-            fboTexture.attach();
-            glFramebufferTexture2D(
-                    GL_FRAMEBUFFER,
-                    GL_DEPTH_ATTACHMENT,
-                    GL_TEXTURE_2D,
-                    fboTexture.glRes(),
-                    0
-            );
-            checkFramebufferStatus();
-
-            fbo.detach();
+            fbo();
         }
 
         @Override
@@ -160,26 +125,29 @@ public class ShadowTest extends TestCase {
 
         @Override
         protected void onFrame() {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
             long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
+            fbo.attach();
+            depthProgram.attach();
+            drawDepth(angleInDegrees);
+            fbo.detach();
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             pointProgram.attach();
             drawLight(angleInDegrees);
             checkError();
 
             normalProgram.attach();
-
             bindLight();
 
             textureB.attach();
             drawVbo(angleInDegrees);
             textureB.detach();
 
-            textureA.attach();
+            fboTexture.attach();
             drawPanel();
-            textureA.detach();
+            fboTexture.detach();
         }
 
         private void bindLight() {
@@ -285,6 +253,106 @@ public class ShadowTest extends TestCase {
 
             vboBinder.bind(null, vertexShader, null);
             glDrawArrays(GL_TRIANGLES, 0, vboData.getFormatDescriptor().getCount());
+        }
+
+        private void drawVboDepth(float angleInDegrees) {
+            vbo.attach();
+
+            float[] modelMatrix = coordinateSystem.modelMatrix();
+
+            Matrix.setIdentityM(modelMatrix, 0);
+
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    90,
+                    1, 0.0f, 0
+            );
+
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0, 1.0f, 0
+            );
+
+            Matrix.translateM(modelMatrix, 0, -1.5f, 0, 0);
+
+            Matrix.rotateM(
+                    modelMatrix, 0,
+                    angleInDegrees,
+                    0, 1, 0
+            );
+
+            VertexShader vertexShader = depthProgram.getVertexShader();
+            vertexShader.uploadUniform("u_ModelMatrix", modelMatrix);
+
+            GeometryData.Descriptor descriptor = vboData.getFormatDescriptor();
+            GeometryData.Component component = descriptor.find(POSITION);
+            vertexShader.findAttribute("a_Position").pointer(
+                    component.dimension,
+                    component.type,
+                    component.normalized,
+                    descriptor.getStride(),
+                    component.offset
+            );
+
+            glDrawArrays(GL_TRIANGLES, 0, descriptor.getCount());
+        }
+
+
+        private void programs() {
+            normalProgram = new Program();
+            normalProgram.attachShader(
+                    new VertexShader(assetSting(VERTEX_SRC)),
+                    new FragmentShader(assetSting(FRAGMENT_SRC))
+            );
+            normalProgram.link();
+
+            pointProgram = new Program();
+            pointProgram.attachShader(
+                    new VertexShader(assetSting(POINT_VERTEX_SRC)),
+                    new FragmentShader(assetSting(POINT_FRAGMENT_SRC))
+            );
+            pointProgram.link();
+
+            depthProgram = new Program();
+            depthProgram.attachShader(
+                    new VertexShader(assetSting(DEPTH_VERTEX_SRC)),
+                    new FragmentShader(assetSting(DEPTH_FRAGMENT_SRC))
+            );
+            depthProgram.link();
+        }
+
+        private void fbo() {
+            fbo = new FBO();
+            fbo.attach();
+            fboTexture.attach();
+            glFramebufferTexture2D(
+                    GL_FRAMEBUFFER,
+                    GL_DEPTH_ATTACHMENT,
+                    GL_TEXTURE_2D,
+                    fboTexture.glRes(),
+                    0
+            );
+            checkFramebufferStatus();
+
+            fbo.detach();
+        }
+
+        private void drawDepth(float angleInDegrees) {
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            float[] modelMatrix = coordinateSystem.modelMatrix();
+
+            Matrix.setIdentityM(modelMatrix, 0);
+
+            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+
+            depthProgram.getVertexShader().uploadUniform(
+                    "u_LightMVPMatrix",
+                    M_V_P_MATRIX
+            );
+
+            drawVboDepth(angleInDegrees);
         }
 
     }
