@@ -1,38 +1,53 @@
 package com.ice.test.shadow_test;
 
-import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.FBO;
-import com.ice.graphics.GlUtil;
-import com.ice.graphics.geometry.*;
+import com.ice.graphics.VBO;
+import com.ice.graphics.geometry.CoordinateSystem;
+import com.ice.graphics.geometry.GeometryData;
+import com.ice.graphics.geometry.IndexedGeometryData;
+import com.ice.graphics.geometry.VBOGeometry;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
-import com.ice.graphics.shader.ShaderBinder;
 import com.ice.graphics.shader.VertexShader;
 import com.ice.graphics.texture.BitmapTexture;
 import com.ice.graphics.texture.FboTexture;
-import com.ice.model.ObjLoader;
+import com.ice.graphics.texture.Texture;
 import com.ice.test.R;
 
 import javax.microedition.khronos.egl.EGLConfig;
-import java.util.HashMap;
-import java.util.Map;
 
+import static android.graphics.Color.WHITE;
 import static android.opengl.GLES20.*;
+import static android.opengl.Matrix.multiplyMV;
 import static com.ice.engine.Res.*;
+import static com.ice.graphics.GlUtil.checkError;
+import static com.ice.graphics.GlUtil.checkFramebufferStatus;
+import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
+import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
+import static com.ice.graphics.geometry.GeometryDataFactory.createStripGridData;
 import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
+import static com.ice.model.ObjLoader.loadObj;
 
 /**
- * User: Jason
- * Date: 13-2-12
+ * User: jason
+ * Date: 13-2-22
  */
 public class ShadowTest extends TestCase {
-    private static final String VERTEX_SRC = "texture/vertex.glsl";
-    private static final String FRAGMENT_SRC = "texture/fragment.glsl";
+    private static final String DEPTH_VERTEX_SRC = "shadow_map/depth_vertex.glsl";
+    private static final String DEPTH_FRAGMENT_SRC = "shadow_map/depth_fragment.glsl";
+
+    private static final String VERTEX_SRC = "shadow_map/normal_vertex.glsl";
+    private static final String FRAGMENT_SRC = "shadow_map/normal_fragment.glsl";
+
+    private static final String POINT_VERTEX_SRC = "shadow_map/point_vertex.glsl";
+    private static final String POINT_FRAGMENT_SRC = "shadow_map/point_fragment.glsl";
+
+    private CoordinateSystem coordinateSystem = new CoordinateSystem();
 
     @Override
     protected GLSurfaceView.Renderer buildRenderer() {
@@ -40,64 +55,84 @@ public class ShadowTest extends TestCase {
     }
 
     private class Renderer extends AbstractRenderer {
-        Program program;
-        Geometry panle;
-        Geometry geometryA;
-        Geometry geometryB;
-        FBO fbo;
+        VBO vbo, plane, light;
+        Program normalProgram, pointProgram;
+
+        private FBO fbo;
         private FboTexture fboTexture;
+        private Texture textureA, textureB;
+
+        float[] lightPosInSelfSpace = {0, 1.5f, 1.2f, 1};
+        float[] lightVectorInViewSpace = new float[4];
+        private GeometryData vboData;
+        private IndexedGeometryData planeData;
+        private VBOGeometry.EasyBinder vboBinder, planeBinder;
 
         @Override
         protected void onCreated(EGLConfig config) {
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
 
-            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
-            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
+            programs();
 
-            program = new Program();
-            program.attachShader(vsh, fsh);
-            program.link();
+            vboData = loadObj(openRaw(R.raw.teaport));
+            vbo = new VBO(vboData.getVertexData());
+            vboBinder = new VBOGeometry.EasyBinder(vboData.getFormatDescriptor());
 
-            Map<String, String> nameMap = new HashMap<String, String>();
-            nameMap.put(ShaderBinder.POSITION, "a_Position");
-            nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
+            planeData = createStripGridData(5, 5, 1, 1);
+            plane = new VBO(planeData.getVertexData());
+            planeBinder = new VBOGeometry.EasyBinder(planeData.getFormatDescriptor());
 
-            GeometryData geometryData = GeometryDataFactory.createCubeData(1);
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            geometryA = new VBOGeometry(geometryData, vsh);
-            geometryA.setTexture(
-                    new BitmapTexture(bitmap(R.drawable.freshfruit2))
+            light = new VBO(
+                    createPointData(lightPosInSelfSpace, WHITE, 10).getVertexData()
             );
 
-            geometryData = ObjLoader.loadObj(openRaw(R.raw.teaport));
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            geometryB = new VBOGeometry(geometryData, vsh);
-            Bitmap bitmap = bitmap(R.drawable.mask1);
-            geometryB.setTexture(
-                    new BitmapTexture(bitmap, LINEAR_REPEAT)
-            );
+            textureA = new BitmapTexture(bitmap(R.drawable.poker_back));
 
-            geometryData = GeometryDataFactory.createStripGridData(4, 4.5f, 1, 1);
-            //geometryData.getFormatDescriptor().setMode(GL_LINE_STRIP);
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            panle = new VBOGeometry(geometryData, vsh);
+            textureB = new BitmapTexture(
+                    bitmap(R.drawable.mask1),
+                    LINEAR_REPEAT
+            );
 
             fboTexture = new FboTexture(768, 920);
 
-            panle.setTexture(fboTexture);
+            checkError();
+            //fbo();
+        }
 
+        private void programs() {
+            normalProgram = new Program();
+            normalProgram.attachShader(
+                    new VertexShader(assetSting(VERTEX_SRC)),
+                    new FragmentShader(assetSting(FRAGMENT_SRC))
+            );
+            normalProgram.link();
+
+            pointProgram = new Program();
+            VertexShader vsh = new VertexShader(assetSting(POINT_VERTEX_SRC));
+            pointProgram.attachShader(
+                    vsh,
+                    new FragmentShader(assetSting(POINT_FRAGMENT_SRC))
+            );
+            pointProgram.link();
+        }
+
+        private void fbo() {
             fbo = new FBO();
             fbo.attach();
             fboTexture.attach();
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, fboTexture.glRes(), 0);
-
-            GlUtil.checkFramebufferStatus();
+            glFramebufferTexture2D(
+                    GL_FRAMEBUFFER,
+                    GL_DEPTH_ATTACHMENT,
+                    GL_TEXTURE_2D,
+                    fboTexture.glRes(),
+                    0
+            );
+            checkFramebufferStatus();
 
             fbo.detach();
         }
-
 
         @Override
         protected void onChanged(int width, int height) {
@@ -114,105 +149,116 @@ public class ShadowTest extends TestCase {
             simpleGlobal.eye(6);
             simpleGlobal.perspective(45, width / (float) height, 1, 10);
 
-//            float[] viewMatrix = simpleGlobal.viewMatrix();
-//
-//            Matrix.rotateM(
-//                    viewMatrix, 0,
-//                    -60,
-//                    1.0f, 0, 0
-//            );
+            float[] viewMatrix = simpleGlobal.viewMatrix();
+
+            Matrix.rotateM(
+                    viewMatrix, 0,
+                    -60,
+                    1.0f, 0, 0
+            );
         }
 
         @Override
         protected void onFrame() {
-            drawOffscreen();
-
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            drawOtherGeometrys();
-
-            drawPanel();
-        }
-
-        private void drawOffscreen() {
-            fbo.attach();
-            fboTexture.attach();
-
-            glColorMask(false, false, false, false);
-            glClear(GL_DEPTH_BUFFER_BIT);
-
-            drawOtherGeometrys();
-
-            glColorMask(true, true, true, true);
-
-            fboTexture.detach();
-            fbo.detach();
-        }
-
-        private void drawOtherGeometrys() {
-            // Do a complete rotation every 10 seconds.
             long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
-            geometryA.attach();
-            styleA(angleInDegrees, geometryA);
-            styleB(angleInDegrees, geometryA);
-            geometryA.detach();
+            pointProgram.attach();
+            drawLight(angleInDegrees);
+            checkError();
 
-            geometryB.attach();
-            styleC(angleInDegrees, geometryB);
-            geometryB.detach();
+            normalProgram.attach();
+
+            bindLight();
+
+            textureB.attach();
+            drawVbo(angleInDegrees);
+            textureB.detach();
+
+            textureA.attach();
+            drawPanel();
+            textureA.detach();
+        }
+
+        private void bindLight() {
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+
+            float[] dir = new float[]{
+                    lightPosInSelfSpace[0],
+                    lightPosInSelfSpace[1],
+                    lightPosInSelfSpace[2],
+                    0
+            };
+
+            multiplyMV(lightVectorInViewSpace, 0, M_V_MATRIX, 0, dir, 0);
+
+            normalProgram.getFragmentShader().uploadUniform(
+                    "u_LightVector",
+                    lightVectorInViewSpace[0],
+                    lightVectorInViewSpace[1],
+                    lightVectorInViewSpace[2]
+            );
+        }
+
+        private void drawLight(float angleInDegrees) {
+            light.attach();
+
+            float[] modelMatrix = coordinateSystem.modelMatrix();
+
+            Matrix.setIdentityM(modelMatrix, 0);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0, 0, 1);
+
+            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+
+            VertexShader vertexShader = pointProgram.getVertexShader();
+            vertexShader.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+
+            vertexShader.findAttribute("a_Position").pointer(
+                    3,
+                    GL_FLOAT,
+                    false,
+                    0,
+                    0
+            );
+
+
+            glDrawArrays(GL_POINTS, 0, 1);
+            light.detach();
         }
 
         private void drawPanel() {
-            panle.attach();
+            plane.attach();
 
-            updateMVPMatrix(panle);
-            panle.draw();
-
-            panle.detach();
-        }
-
-        private void styleA(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+            float[] modelMatrix = coordinateSystem.modelMatrix();
 
             Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.translateM(
-                    modelMatrix, 0,
-                    0, 0, 0.5f
-            );
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0f, 0f, 1.0f
-            );
-            updateMVPMatrix(geometry);
-            geometry.draw();
+
+            VertexShader vertexShader = normalProgram.getVertexShader();
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+            vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
+
+            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+            vertexShader.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+
+            planeBinder.bind(null, vertexShader, null);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, planeData.getFormatDescriptor().getCount());
+
+            plane.detach();
         }
 
-        private void styleB(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+        private void drawVbo(float angleInDegrees) {
+            vbo.attach();
 
-            Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.translateM(modelMatrix, 0, 1.5f, -1, 0);
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0f, 0f, 1.0f
-            );
-            updateMVPMatrix(geometry);
-            geometry.draw();
-        }
-
-        private void styleC(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+            float[] modelMatrix = coordinateSystem.modelMatrix();
 
             Matrix.setIdentityM(modelMatrix, 0);
 
             Matrix.rotateM(
                     modelMatrix, 0,
                     90,
-                    1, 0f, 0
+                    1, 0.0f, 0
             );
 
             Matrix.rotateM(
@@ -221,7 +267,7 @@ public class ShadowTest extends TestCase {
                     0, 1.0f, 0
             );
 
-            Matrix.translateM(modelMatrix, 0, 1.5f, 0, 0);
+            Matrix.translateM(modelMatrix, 0, -1.5f, 0, 0);
 
             Matrix.rotateM(
                     modelMatrix, 0,
@@ -229,16 +275,16 @@ public class ShadowTest extends TestCase {
                     0, 1, 0
             );
 
-            updateMVPMatrix(geometry);
-            geometry.draw();
-        }
+            VertexShader vertexShader = normalProgram.getVertexShader();
 
-        private void updateMVPMatrix(Geometry geometry) {
-            CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
+            coordinateSystem.modelViewMatrix(M_V_MATRIX);
+            vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+            vertexShader.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
 
-            program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+            vboBinder.bind(null, vertexShader, null);
+            glDrawArrays(GL_TRIANGLES, 0, vboData.getFormatDescriptor().getCount());
         }
 
     }
