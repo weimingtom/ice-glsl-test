@@ -66,6 +66,8 @@ public class ShadowTest extends TestCase {
         float[] lightVectorInViewSpace = new float[4];
         GeometryData vboData, planeData;
         VBOGeometry.EasyBinder vboBinder, planeBinder;
+        private CoordinateSystem.SimpleGlobal lightGlobal;
+
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -112,14 +114,23 @@ public class ShadowTest extends TestCase {
 
             CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
             simpleGlobal.eye(6);
-            simpleGlobal.perspective(45, width / (float) height, 1, 10);
+            float aspect = width / (float) height;
+            simpleGlobal.perspective(45, aspect, 1, 10);
 
-            float[] viewMatrix = simpleGlobal.viewMatrix();
+//            float[] viewMatrix = simpleGlobal.viewMatrix();
+//
+//            Matrix.rotateM(
+//                    viewMatrix, 0,
+//                    -60,
+//                    1.0f, 0, 0
+//            );
 
-            Matrix.rotateM(
-                    viewMatrix, 0,
-                    -60,
-                    1.0f, 0, 0
+            lightGlobal = new CoordinateSystem.SimpleGlobal();
+            lightGlobal.eye(6);
+            //lightGlobal.perspective(45, aspect, 1, 10);
+            lightGlobal.ortho(
+                    -aspect, aspect, -1.0f, 1.0f,
+                    0.1f, 10.0f
             );
         }
 
@@ -298,7 +309,6 @@ public class ShadowTest extends TestCase {
             glDrawArrays(GL_TRIANGLES, 0, descriptor.getCount());
         }
 
-
         private void programs() {
             normalProgram = new Program();
             normalProgram.attachShader(
@@ -344,8 +354,38 @@ public class ShadowTest extends TestCase {
             float[] modelMatrix = coordinateSystem.modelMatrix();
 
             Matrix.setIdentityM(modelMatrix, 0);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0, 0, 1);
 
-            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+//            float[] dir = new float[]{
+//                    lightPosInSelfSpace[0],
+//                    lightPosInSelfSpace[1],
+//                    lightPosInSelfSpace[2],
+//                    0
+//            };
+//
+//            multiplyMV(lightVectorInViewSpace, 0, modelMatrix, 0, dir, 0);
+//
+//            lightGlobal.eye(
+//                    dir[0], dir[1], dir[2],
+//                    0, 0, 0,
+//                    0, 1, 0
+//            );
+//
+//            //coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
+//
+//            float[] lightViewMatrix = lightGlobal.viewMatrix();
+//
+            Matrix.multiplyMM(
+                    M_V_MATRIX, 0,
+                    lightGlobal.viewMatrix(), 0,
+                    modelMatrix, 0
+            );
+
+            Matrix.multiplyMM(
+                    M_V_P_MATRIX, 0,
+                    lightGlobal.projectMatrix(), 0,
+                    M_V_MATRIX, 0
+            );
 
             depthProgram.getVertexShader().uploadUniform(
                     "u_LightMVPMatrix",
