@@ -64,13 +64,16 @@ public class ShadowTest extends TestCase {
         FboTexture fboTexture;
         Texture textureA, textureB;
 
-        float[] lightPosInWorldSpace = {0, 1.5f, 1.5f, 1};
+        float angle = 45;
+        float zRate = (float) Math.tan(Math.toRadians(angle));
+        float y = 1.5f;
+        float[] lightPosInSelfSpace = {0, y, y * zRate, 1};
+        float[] lightVectorInWorldSpace = new float[4];
         float[] lightVectorInViewSpace = new float[4];
         GeometryData vboData, planeData;
         VBOGeometry.EasyBinder vboBinder, planeBinder;
         CoordinateSystem.SimpleGlobal lightGlobal;
         private float[] lightModelMatrix = new float[16];
-        private float[] lightModelInvertMatrix = new float[16];
         private float[] lightMVPInLightSpace = new float[16];
         private float[] lightMVPInViewSpace = new float[16];
         private float[] vboModelMatrix = new float[16];
@@ -94,7 +97,7 @@ public class ShadowTest extends TestCase {
             planeBinder = new VBOGeometry.EasyBinder(planeData.getFormatDescriptor());
 
             light = new VBO(
-                    createPointData(lightPosInWorldSpace, WHITE, 10).getVertexData()
+                    createPointData(lightPosInSelfSpace, WHITE, 10).getVertexData()
             );
 
             textureA = new BitmapTexture(bitmap(R.drawable.poker_back));
@@ -142,19 +145,13 @@ public class ShadowTest extends TestCase {
 //            );
 
             lightGlobal = new CoordinateSystem.SimpleGlobal();
-            lightGlobal.eye(
-                    0, -lightPosInWorldSpace[1] * 3.0f, lightPosInWorldSpace[2] * 3.0f,
-                    0, 0, 0,
-                    0, 1, 0
-            );
 
-            lightGlobal.perspective(45, aspect, 1, 10);
+            lightGlobal.perspective(45, aspect, 1f, 10);
 //            float bottom = 2.5f;
 //            lightGlobal.ortho(
 //                    -aspect * bottom, aspect * bottom, -bottom, bottom,
 //                    0.1f, 10.0f
 //            );
-
         }
 
         @Override
@@ -186,7 +183,8 @@ public class ShadowTest extends TestCase {
             if (showShadow) {
                 shadowMapProgram.attach();
                 drawPlaneWithShadow();
-            } else {
+            }
+            else {
                 drawPlaneWithoutShadow();
             }
 
@@ -225,25 +223,36 @@ public class ShadowTest extends TestCase {
             multiplyMM(lightMVPInViewSpace, 0, global.projectMatrix(), 0, M_V_MATRIX, 0);
 
             float[] dir = new float[]{
-                    lightPosInWorldSpace[0],
-                    lightPosInWorldSpace[1],
-                    lightPosInWorldSpace[2],
+                    lightPosInSelfSpace[0],
+                    lightPosInSelfSpace[1],
+                    lightPosInSelfSpace[2],
                     0
             };
-
+            multiplyMV(lightVectorInWorldSpace, 0, lightModelMatrix, 0, dir, 0);
             multiplyMV(lightVectorInViewSpace, 0, M_V_MATRIX, 0, dir, 0);
 
-            //Matrix.invertM(lightModelInvertMatrix, 0, lightModelMatrix, 0);
-            multiplyMM(M_V_MATRIX, 0, lightGlobal.viewMatrix(), 0, lightModelMatrix, 0);
-            multiplyMM(lightMVPInLightSpace, 0, lightGlobal.projectMatrix(), 0, M_V_MATRIX, 0);
+            float rate = 3.0f;
+            float eyeX = lightVectorInWorldSpace[0] * rate;
+            float eyeY = lightVectorInWorldSpace[1] * rate;
+            float eyeZ = lightVectorInWorldSpace[2] * rate;
+            lightGlobal.eye(
+                    eyeX, eyeY, eyeZ,
+                    0, 0, 0,
+                    0, 1, 0
+            );
+
+//            double sqrt = Math.sqrt(eyeX * eyeX + eyeY * eyeY + eyeZ * eyeZ);
+//            System.out.println("sqrt = " + sqrt);
+
+            multiplyMM(lightMVPInLightSpace, 0, lightGlobal.projectMatrix(), 0, lightGlobal.viewMatrix(), 0);
             //*******************light
 
             //**********************vbo
             setIdentityM(vboModelMatrix, 0);
             rotateM(vboModelMatrix, 0, 90, 1, 0.0f, 0);
-            //rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1.0f, 0);
-            // Matrix.translateM(vboModelMatrix, 0, -1.5f, 0, 0);
-            //rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1, 0);
+            rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1.0f, 0);
+            translateM(vboModelMatrix, 0, -1.0f, 0, 0);
+            rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1, 0);
 
             multiplyMM(vboMVMatrix, 0, global.viewMatrix(), 0, vboModelMatrix, 0);
             multiplyMM(vboMVPMatrix, 0, global.projectMatrix(), 0, vboMVMatrix, 0);
@@ -308,7 +317,8 @@ public class ShadowTest extends TestCase {
             if (showShadow) {
                 vertexShader = shadowMapProgram.getVertexShader();
                 vertexShader.uploadUniform("u_MMatrix", modelMatrix);
-            } else {
+            }
+            else {
                 vertexShader = normalProgram.getVertexShader();
             }
 
