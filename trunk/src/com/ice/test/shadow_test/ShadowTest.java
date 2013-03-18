@@ -1,7 +1,6 @@
 package com.ice.test.shadow_test;
 
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.FBO;
@@ -65,13 +64,15 @@ public class ShadowTest extends TestCase {
         FboTexture fboTexture;
         Texture textureA, textureB;
 
-        float[] lightPosInSelfSpace = {0, 1.5f, 1.5f, 1};
+        float[] lightPosInWorldSpace = {0, 1.5f, 1.5f, 1};
         float[] lightVectorInViewSpace = new float[4];
         GeometryData vboData, planeData;
         VBOGeometry.EasyBinder vboBinder, planeBinder;
         CoordinateSystem.SimpleGlobal lightGlobal;
         private float[] lightModelMatrix = new float[16];
-        private float[] lightMVPMatrix = new float[16];
+        private float[] lightModelInvertMatrix = new float[16];
+        private float[] lightMVPInLightSpace = new float[16];
+        private float[] lightMVPInViewSpace = new float[16];
         private float[] vboModelMatrix = new float[16];
         private float[] vboMVPMatrix = new float[16];
         private float[] vboMVMatrix = new float[16];
@@ -93,7 +94,7 @@ public class ShadowTest extends TestCase {
             planeBinder = new VBOGeometry.EasyBinder(planeData.getFormatDescriptor());
 
             light = new VBO(
-                    createPointData(lightPosInSelfSpace, WHITE, 10).getVertexData()
+                    createPointData(lightPosInWorldSpace, WHITE, 10).getVertexData()
             );
 
             textureA = new BitmapTexture(bitmap(R.drawable.poker_back));
@@ -120,29 +121,40 @@ public class ShadowTest extends TestCase {
             }
 
             CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
-            simpleGlobal.eye(6);
+
+            //simpleGlobal.eye(6);
+            simpleGlobal.eye(
+                    0, -4, 4,
+                    0, 0, 0,
+                    0, 1, 0
+            );
+
             float aspect = width / (float) height;
             simpleGlobal.perspective(45, aspect, 1, 10);
 //            simpleGlobal.ortho(
 //                    -aspect, aspect, -1.0f, 1.0f,
 //                    0.1f, 10.0f
 //            );
-
-            float[] viewMatrix = simpleGlobal.viewMatrix();
-
-            Matrix.rotateM(
-                    viewMatrix, 0,
-                    -60,
-                    1.0f, 0, 0
-            );
+//            Matrix.rotateM(
+//                    simpleGlobal.viewMatrix(), 0,
+//                    -60,
+//                    1.0f, 0, 0
+//            );
 
             lightGlobal = new CoordinateSystem.SimpleGlobal();
-            lightGlobal.eye(6);
-            //lightGlobal.perspective(45, aspect, 1, 10);
-            lightGlobal.ortho(
-                    -aspect, aspect, -1.0f, 1.0f,
-                    0.1f, 10.0f
+            lightGlobal.eye(
+                    0, -lightPosInWorldSpace[1] * 3.0f, lightPosInWorldSpace[2] * 3.0f,
+                    0, 0, 0,
+                    0, 1, 0
             );
+
+            lightGlobal.perspective(45, aspect, 1, 10);
+//            float bottom = 2.5f;
+//            lightGlobal.ortho(
+//                    -aspect * bottom, aspect * bottom, -bottom, bottom,
+//                    0.1f, 10.0f
+//            );
+
         }
 
         @Override
@@ -181,9 +193,6 @@ public class ShadowTest extends TestCase {
         }
 
         private void drawPlaneWithoutShadow() {
-            VertexShader vertexShader = normalProgram.getVertexShader();
-            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPMatrix);
-
             FragmentShader fragmentShader = normalProgram.getFragmentShader();
 
             fragmentShader.uploadUniform(
@@ -211,25 +220,30 @@ public class ShadowTest extends TestCase {
             //*******************light
             setIdentityM(lightModelMatrix, 0);
             rotateM(lightModelMatrix, 0, angleInDegrees, 0, 0, 1);
+
             multiplyMM(M_V_MATRIX, 0, global.viewMatrix(), 0, lightModelMatrix, 0);
-            multiplyMM(lightMVPMatrix, 0, global.projectMatrix(), 0, M_V_MATRIX, 0);
+            multiplyMM(lightMVPInViewSpace, 0, global.projectMatrix(), 0, M_V_MATRIX, 0);
 
             float[] dir = new float[]{
-                    lightPosInSelfSpace[0],
-                    lightPosInSelfSpace[1],
-                    lightPosInSelfSpace[2],
+                    lightPosInWorldSpace[0],
+                    lightPosInWorldSpace[1],
+                    lightPosInWorldSpace[2],
                     0
             };
 
             multiplyMV(lightVectorInViewSpace, 0, M_V_MATRIX, 0, dir, 0);
+
+            //Matrix.invertM(lightModelInvertMatrix, 0, lightModelMatrix, 0);
+            multiplyMM(M_V_MATRIX, 0, lightGlobal.viewMatrix(), 0, lightModelMatrix, 0);
+            multiplyMM(lightMVPInLightSpace, 0, lightGlobal.projectMatrix(), 0, M_V_MATRIX, 0);
             //*******************light
 
             //**********************vbo
             setIdentityM(vboModelMatrix, 0);
             rotateM(vboModelMatrix, 0, 90, 1, 0.0f, 0);
-            rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1.0f, 0);
-            Matrix.translateM(vboModelMatrix, 0, -1.5f, 0, 0);
-            rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1, 0);
+            //rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1.0f, 0);
+            // Matrix.translateM(vboModelMatrix, 0, -1.5f, 0, 0);
+            //rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1, 0);
 
             multiplyMM(vboMVMatrix, 0, global.viewMatrix(), 0, vboModelMatrix, 0);
             multiplyMM(vboMVPMatrix, 0, global.projectMatrix(), 0, vboMVMatrix, 0);
@@ -238,7 +252,7 @@ public class ShadowTest extends TestCase {
 
         private void drawPlaneWithShadow() {
             VertexShader vertexShader = shadowMapProgram.getVertexShader();
-            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPMatrix);
+            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPInLightSpace);
 
             FragmentShader fragmentShader = shadowMapProgram.getFragmentShader();
 
@@ -267,7 +281,7 @@ public class ShadowTest extends TestCase {
             light.attach();
 
             VertexShader vertexShader = pointProgram.getVertexShader();
-            vertexShader.uploadUniform("u_MVPMatrix", lightMVPMatrix);
+            vertexShader.uploadUniform("u_MVPMatrix", lightMVPInViewSpace);
 
             vertexShader.findAttribute("a_Position").pointer(
                     3,
@@ -378,7 +392,7 @@ public class ShadowTest extends TestCase {
             vbo.attach();
             VertexShader vertexShader = depthProgram.getVertexShader();
 
-            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPMatrix);
+            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPInLightSpace);
             vertexShader.uploadUniform("u_ModelMatrix", vboModelMatrix);
 
             GeometryData.Descriptor descriptor = vboData.getFormatDescriptor();
