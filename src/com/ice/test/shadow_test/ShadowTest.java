@@ -128,13 +128,13 @@ public class ShadowTest extends TestCase {
 //                    0.1f, 10.0f
 //            );
 
-//            float[] viewMatrix = simpleGlobal.viewMatrix();
-//
-//            Matrix.rotateM(
-//                    viewMatrix, 0,
-//                    -60,
-//                    1.0f, 0, 0
-//            );
+            float[] viewMatrix = simpleGlobal.viewMatrix();
+
+            Matrix.rotateM(
+                    viewMatrix, 0,
+                    -60,
+                    1.0f, 0, 0
+            );
 
             lightGlobal = new CoordinateSystem.SimpleGlobal();
             lightGlobal.eye(6);
@@ -169,19 +169,50 @@ public class ShadowTest extends TestCase {
             textureB.detach();
             checkError();
 
-            shadowMapProgram.attach();
-            drawWithShadow();
+            boolean showShadow = true;
+
+            if (showShadow) {
+                shadowMapProgram.attach();
+                drawPlaneWithShadow();
+            } else {
+                drawPlaneWithoutShadow();
+            }
+
+        }
+
+        private void drawPlaneWithoutShadow() {
+            VertexShader vertexShader = normalProgram.getVertexShader();
+            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPMatrix);
+
+            FragmentShader fragmentShader = normalProgram.getFragmentShader();
+
+            fragmentShader.uploadUniform(
+                    "u_LightVector",
+                    lightVectorInViewSpace[0],
+                    lightVectorInViewSpace[1],
+                    lightVectorInViewSpace[2]
+            );
+
+            glActiveTexture(GL_TEXTURE0);
+            fboTexture.attach();
+
+            drawPanel(false);
+
+            fboTexture.detach();
+
         }
 
         private void updateModels() {
             long time = System.currentTimeMillis() % 10000L;
             float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
+            CoordinateSystem.Global global = CoordinateSystem.global();
+
             //*******************light
             setIdentityM(lightModelMatrix, 0);
             rotateM(lightModelMatrix, 0, angleInDegrees, 0, 0, 1);
-            multiplyMM(M_V_MATRIX, 0, lightGlobal.viewMatrix(), 0, lightModelMatrix, 0);
-            multiplyMM(lightMVPMatrix, 0, lightGlobal.projectMatrix(), 0, M_V_MATRIX, 0);
+            multiplyMM(M_V_MATRIX, 0, global.viewMatrix(), 0, lightModelMatrix, 0);
+            multiplyMM(lightMVPMatrix, 0, global.projectMatrix(), 0, M_V_MATRIX, 0);
 
             float[] dir = new float[]{
                     lightPosInSelfSpace[0],
@@ -200,17 +231,14 @@ public class ShadowTest extends TestCase {
             Matrix.translateM(vboModelMatrix, 0, -1.5f, 0, 0);
             rotateM(vboModelMatrix, 0, angleInDegrees, 0, 1, 0);
 
-            CoordinateSystem.Global vboGlobal = CoordinateSystem.global();
-            multiplyMM(vboMVMatrix, 0, vboGlobal.viewMatrix(), 0, vboModelMatrix, 0);
-            multiplyMM(vboMVPMatrix, 0, vboGlobal.projectMatrix(), 0, vboMVMatrix, 0);
+            multiplyMM(vboMVMatrix, 0, global.viewMatrix(), 0, vboModelMatrix, 0);
+            multiplyMM(vboMVPMatrix, 0, global.projectMatrix(), 0, vboMVMatrix, 0);
             //**********************vbo
         }
 
-        private void drawWithShadow() {
-            shadowMapProgram.getVertexShader().uploadUniform(
-                    "u_LightMVPMatrix",
-                    lightMVPMatrix
-            );
+        private void drawPlaneWithShadow() {
+            VertexShader vertexShader = shadowMapProgram.getVertexShader();
+            vertexShader.uploadUniform("u_LightMVPMatrix", lightMVPMatrix);
 
             FragmentShader fragmentShader = shadowMapProgram.getFragmentShader();
 
@@ -229,7 +257,7 @@ public class ShadowTest extends TestCase {
 
             fragmentShader.uploadUniform("u_DepthMap", 1);
 
-            drawPanel();
+            drawPanel(true);
 
             fboTexture.detach();
             textureA.detach();
@@ -254,16 +282,21 @@ public class ShadowTest extends TestCase {
             light.detach();
         }
 
-        private void drawPanel() {
+        private void drawPanel(boolean showShadow) {
             plane.attach();
 
             float[] modelMatrix = coordinateSystem.modelMatrix();
 
             setIdentityM(modelMatrix, 0);
 
-            VertexShader vertexShader = shadowMapProgram.getVertexShader();
+            VertexShader vertexShader;
 
-            vertexShader.uploadUniform("u_MMatrix", modelMatrix);
+            if (showShadow) {
+                vertexShader = shadowMapProgram.getVertexShader();
+                vertexShader.uploadUniform("u_MMatrix", modelMatrix);
+            } else {
+                vertexShader = normalProgram.getVertexShader();
+            }
 
             coordinateSystem.modelViewMatrix(M_V_MATRIX);
             vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
