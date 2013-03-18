@@ -62,13 +62,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".light.directional_light.ShadowTest">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.ICE"/>
-            </intent-filter>
-        </activity>
-
         <activity android:name=".blend.BlendTest">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
