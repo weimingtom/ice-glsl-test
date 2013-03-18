@@ -38,11 +38,14 @@ import static com.ice.model.ObjLoader.loadObj;
  * Date: 13-2-22
  */
 public class ShadowTest extends TestCase {
+    private static final String SHADOW_MAP_VERTEX_SRC = "shadow_map/shadow_map_vertex.glsl";
+    private static final String SHADOW_MAP_FRAGMENT_SRC = "shadow_map/shadow_map_fragment.glsl";
+
     private static final String DEPTH_VERTEX_SRC = "shadow_map/depth_vertex.glsl";
     private static final String DEPTH_FRAGMENT_SRC = "shadow_map/depth_fragment.glsl";
 
-    private static final String VERTEX_SRC = "shadow_map/normal_vertex.glsl";
-    private static final String FRAGMENT_SRC = "shadow_map/normal_fragment.glsl";
+    private static final String NORMAL_VERTEX_SRC = "shadow_map/normal_vertex.glsl";
+    private static final String NORMAL_FRAGMENT_SRC = "shadow_map/normal_fragment.glsl";
 
     private static final String POINT_VERTEX_SRC = "shadow_map/point_vertex.glsl";
     private static final String POINT_FRAGMENT_SRC = "shadow_map/point_fragment.glsl";
@@ -56,18 +59,17 @@ public class ShadowTest extends TestCase {
 
     private class Renderer extends AbstractRenderer {
         VBO vbo, plane, light;
-        Program normalProgram, pointProgram, depthProgram;
+        Program normalProgram, pointProgram, depthProgram, shadowMapProgram;
 
         FBO fbo;
         FboTexture fboTexture;
         Texture textureA, textureB;
 
-        float[] lightPosInSelfSpace = {0, 1.5f, 1.2f, 1};
+        float[] lightPosInSelfSpace = {0, 1.5f, 1.5f, 1};
         float[] lightVectorInViewSpace = new float[4];
         GeometryData vboData, planeData;
         VBOGeometry.EasyBinder vboBinder, planeBinder;
-        private CoordinateSystem.SimpleGlobal lightGlobal;
-
+        CoordinateSystem.SimpleGlobal lightGlobal;
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -116,6 +118,10 @@ public class ShadowTest extends TestCase {
             simpleGlobal.eye(6);
             float aspect = width / (float) height;
             simpleGlobal.perspective(45, aspect, 1, 10);
+//            simpleGlobal.ortho(
+//                    -aspect, aspect, -1.0f, 1.0f,
+//                    0.1f, 10.0f
+//            );
 
 //            float[] viewMatrix = simpleGlobal.viewMatrix();
 //
@@ -145,23 +151,65 @@ public class ShadowTest extends TestCase {
             fbo.detach();
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
             pointProgram.attach();
             drawLight(angleInDegrees);
             checkError();
 
             normalProgram.attach();
-            bindLight();
-
+            bindLight(normalProgram);
+            glActiveTexture(GL_TEXTURE0);
             textureB.attach();
             drawVbo(angleInDegrees);
             textureB.detach();
+            checkError();
 
-            fboTexture.attach();
-            drawPanel();
-            fboTexture.detach();
+            shadowMapProgram.attach();
+            drawWithShadow(angleInDegrees);
         }
 
-        private void bindLight() {
+        private void drawWithShadow(float angleInDegrees) {
+            float[] modelMatrix = coordinateSystem.modelMatrix();
+
+            Matrix.setIdentityM(modelMatrix, 0);
+            Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0, 0, 1);
+
+            Matrix.multiplyMM(
+                    M_V_MATRIX, 0,
+                    lightGlobal.viewMatrix(), 0,
+                    modelMatrix, 0
+            );
+
+            Matrix.multiplyMM(
+                    M_V_P_MATRIX, 0,
+                    lightGlobal.projectMatrix(), 0,
+                    M_V_MATRIX, 0
+            );
+
+            shadowMapProgram.getVertexShader().uploadUniform(
+                    "u_LightMVPMatrix",
+                    M_V_P_MATRIX
+            );
+
+            bindLight(shadowMapProgram);
+
+            glActiveTexture(GL_TEXTURE0);
+            textureA.attach();
+
+            glActiveTexture(GL_TEXTURE1);
+            fboTexture.attach();
+
+            FragmentShader fragmentShader = shadowMapProgram.getFragmentShader();
+
+            fragmentShader.uploadUniform("u_DepthMap", 1);
+
+            drawPanel();
+
+            fboTexture.detach();
+            textureA.detach();
+        }
+
+        private void bindLight(Program program) {
             coordinateSystem.modelViewMatrix(M_V_MATRIX);
 
             float[] dir = new float[]{
@@ -173,7 +221,7 @@ public class ShadowTest extends TestCase {
 
             multiplyMV(lightVectorInViewSpace, 0, M_V_MATRIX, 0, dir, 0);
 
-            normalProgram.getFragmentShader().uploadUniform(
+            program.getFragmentShader().uploadUniform(
                     "u_LightVector",
                     lightVectorInViewSpace[0],
                     lightVectorInViewSpace[1],
@@ -214,7 +262,10 @@ public class ShadowTest extends TestCase {
 
             Matrix.setIdentityM(modelMatrix, 0);
 
-            VertexShader vertexShader = normalProgram.getVertexShader();
+            VertexShader vertexShader = shadowMapProgram.getVertexShader();
+
+            vertexShader.uploadUniform("u_MMatrix", modelMatrix);
+
             coordinateSystem.modelViewMatrix(M_V_MATRIX);
             vertexShader.uploadUniform("u_MVMatrix", M_V_MATRIX);
 
@@ -253,6 +304,7 @@ public class ShadowTest extends TestCase {
                     angleInDegrees,
                     0, 1, 0
             );
+
 
             VertexShader vertexShader = normalProgram.getVertexShader();
 
@@ -312,8 +364,8 @@ public class ShadowTest extends TestCase {
         private void programs() {
             normalProgram = new Program();
             normalProgram.attachShader(
-                    new VertexShader(assetSting(VERTEX_SRC)),
-                    new FragmentShader(assetSting(FRAGMENT_SRC))
+                    new VertexShader(assetSting(NORMAL_VERTEX_SRC)),
+                    new FragmentShader(assetSting(NORMAL_FRAGMENT_SRC))
             );
             normalProgram.link();
 
@@ -330,6 +382,13 @@ public class ShadowTest extends TestCase {
                     new FragmentShader(assetSting(DEPTH_FRAGMENT_SRC))
             );
             depthProgram.link();
+
+            shadowMapProgram = new Program();
+            shadowMapProgram.attachShader(
+                    new VertexShader(assetSting(SHADOW_MAP_VERTEX_SRC)),
+                    new FragmentShader(assetSting(SHADOW_MAP_FRAGMENT_SRC))
+            );
+            shadowMapProgram.link();
         }
 
         private void fbo() {
