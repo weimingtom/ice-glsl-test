@@ -1,8 +1,8 @@
 /// Fragment shader for performing a seperable blur on the specified texture.
 
-#ifdef GL_ES
-    precision highp float;
-#endif
+precision highp float;
+
+const float blurSize = 1.0/768.0;
 
 uniform vec2 TexelSize;
 uniform sampler2D Sample0;
@@ -10,53 +10,23 @@ uniform sampler2D Sample0;
 uniform int Orientation;
 uniform int BlurAmount;
 
-varying vec2 v_TexCoordinate;
-
-/// Gets the Gaussian value in the first dimension.
-/// <param name="x">Distance from origin on the x-axis.</param>
-/// <param name="deviation">Standard deviation.</param>
-/// <returns>The gaussian value on the x-axis.</returns>
-float Gaussian (float x, float deviation)
-{
-    return (1.0 / sqrt(2.0 * 3.141592 * deviation)) * exp(-((x * x) / (2.0 * deviation)));  
-}
+varying vec2 vTexCoord;
 
 void main ()
 {
-    float halfBlur = float(BlurAmount) * 0.5;
-    //float deviation = halfBlur * 0.5;
-    vec4 colour;
-    
-    if ( Orientation == 0 )
-    {
-        // Blur horizontal
-        for (int i = 0; i < 10; ++i)
-        {
-            if ( i >= BlurAmount )
-                break;
-            
-            float offset = float(i) - halfBlur;
-            colour += texture2D(Sample0, v_TexCoordinate + vec2(offset * TexelSize.x, 0.0));
-            /* Gaussian(offset, deviation)*/
-        }
-    }
-    else
-    {
-        // Blur vertical
-        for (int i = 0; i < 10; ++i)
-        {
-            if ( i >= BlurAmount )
-                break;
-            
-            float offset = float(i) - halfBlur;
-            colour += texture2D(Sample0, v_TexCoordinate + vec2(0.0, offset * TexelSize.y));
-            /* Gaussian(offset, deviation)*/
-        }
-    }
-    
-    // Calculate average
-    colour = colour / float(BlurAmount);
-    
-    // Apply colour
-    gl_FragColor = colour;
+   vec4 sum = vec4(0.0);
+
+      // blur in y (vertical)
+      // take nine samples, with the distance blurSize between them
+      sum += texture2D(Sample0, vec2(vTexCoord.x - 4.0*blurSize, vTexCoord.y)) * 0.05;
+      sum += texture2D(Sample0, vec2(vTexCoord.x - 3.0*blurSize, vTexCoord.y)) * 0.09;
+      sum += texture2D(Sample0, vec2(vTexCoord.x - 2.0*blurSize, vTexCoord.y)) * 0.12;
+      sum += texture2D(Sample0, vec2(vTexCoord.x - blurSize, vTexCoord.y)) * 0.15;
+      sum += texture2D(Sample0, vec2(vTexCoord.x, vTexCoord.y)) * 0.16;
+      sum += texture2D(Sample0, vec2(vTexCoord.x + blurSize, vTexCoord.y)) * 0.15;
+      sum += texture2D(Sample0, vec2(vTexCoord.x + 2.0*blurSize, vTexCoord.y)) * 0.12;
+      sum += texture2D(Sample0, vec2(vTexCoord.x + 3.0*blurSize, vTexCoord.y)) * 0.09;
+      sum += texture2D(Sample0, vec2(vTexCoord.x + 4.0*blurSize, vTexCoord.y)) * 0.05;
+
+      gl_FragColor = sum;
 }
