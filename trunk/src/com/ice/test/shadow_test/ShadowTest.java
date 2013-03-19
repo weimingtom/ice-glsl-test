@@ -161,8 +161,10 @@ public class ShadowTest extends TestCase {
             fbo.attach();
             depthProgram.attach();
             glClear(GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_CULL_FACE);
             drawDepth();
             fbo.detach();
+            glDisable(GL_CULL_FACE);
             checkError();
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -183,8 +185,7 @@ public class ShadowTest extends TestCase {
             if (showShadow) {
                 shadowMapProgram.attach();
                 drawPlaneWithShadow();
-            }
-            else {
+            } else {
                 drawPlaneWithoutShadow();
             }
 
@@ -317,8 +318,7 @@ public class ShadowTest extends TestCase {
             if (showShadow) {
                 vertexShader = shadowMapProgram.getVertexShader();
                 vertexShader.uploadUniform("u_MMatrix", modelMatrix);
-            }
-            else {
+            } else {
                 vertexShader = normalProgram.getVertexShader();
             }
 
