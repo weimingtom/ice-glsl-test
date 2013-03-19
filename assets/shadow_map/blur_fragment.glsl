@@ -1,12 +1,8 @@
-/// <summary>
 /// Fragment shader for performing a seperable blur on the specified texture.
-/// </summary>
-
 
 #ifdef GL_ES
     precision highp float;
 #endif
-
 
 uniform vec2 TexelSize;
 uniform sampler2D Sample0;
@@ -14,16 +10,9 @@ uniform sampler2D Sample0;
 uniform int Orientation;
 uniform int BlurAmount;
 
+varying vec2 v_TexCoordinate;
 
-/// <summary>
-/// Varying variables.
-/// <summary>
-varying vec2 vUv;
-
-
-/// <summary>
 /// Gets the Gaussian value in the first dimension.
-/// </summary>
 /// <param name="x">Distance from origin on the x-axis.</param>
 /// <param name="deviation">Standard deviation.</param>
 /// <returns>The gaussian value on the x-axis.</returns>
@@ -47,7 +36,8 @@ void main ()
                 break;
             
             float offset = float(i) - halfBlur;
-            colour += texture2D(Sample0, vUv + vec2(offset * TexelSize.x, 0.0)) /* Gaussian(offset, deviation)*/;
+            colour += texture2D(Sample0, v_TexCoordinate + vec2(offset * TexelSize.x, 0.0));
+            /* Gaussian(offset, deviation)*/
         }
     }
     else
@@ -59,7 +49,8 @@ void main ()
                 break;
             
             float offset = float(i) - halfBlur;
-            colour += texture2D(Sample0, vUv + vec2(0.0, offset * TexelSize.y)) /* Gaussian(offset, deviation)*/;
+            colour += texture2D(Sample0, v_TexCoordinate + vec2(0.0, offset * TexelSize.y));
+            /* Gaussian(offset, deviation)*/
         }
     }
     
