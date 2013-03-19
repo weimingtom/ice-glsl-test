@@ -47,7 +47,7 @@ public class SimpleTexture extends TestCase {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glEnable(GL_DEPTH_TEST);
-            //glEnable(GL_CULL_FACE);
+            glEnable(GL_CULL_FACE);
 
             VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
             FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
@@ -75,9 +75,9 @@ public class SimpleTexture extends TestCase {
                     new BitmapTexture(bitmap, LINEAR_REPEAT)
             );
 
-            geometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            panle = new VBOGeometry(geometryData, vsh);
+            IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
+            indexedGeometryData.getFormatDescriptor().namespace(nameMap);
+            panle = new IBOGeometry(indexedGeometryData, vsh);
             panle.setTexture(
                     new BitmapTexture(bitmap(R.drawable.poker_back))
             );
