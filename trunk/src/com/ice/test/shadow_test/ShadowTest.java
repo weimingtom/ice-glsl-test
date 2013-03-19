@@ -7,6 +7,7 @@ import com.ice.graphics.FBO;
 import com.ice.graphics.VBO;
 import com.ice.graphics.geometry.CoordinateSystem;
 import com.ice.graphics.geometry.GeometryData;
+import com.ice.graphics.geometry.IndexedGeometryData;
 import com.ice.graphics.geometry.VBOGeometry;
 import com.ice.graphics.shader.FragmentShader;
 import com.ice.graphics.shader.Program;
@@ -26,6 +27,7 @@ import static com.ice.graphics.GlUtil.checkError;
 import static com.ice.graphics.GlUtil.checkFramebufferStatus;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_MATRIX;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
+import static com.ice.graphics.geometry.CoordinateSystem.SimpleGlobal;
 import static com.ice.graphics.geometry.GeometryDataFactory.createPointData;
 import static com.ice.graphics.geometry.GeometryDataFactory.createStripGridData;
 import static com.ice.graphics.shader.ShaderBinder.POSITION;
@@ -49,6 +51,9 @@ public class ShadowTest extends TestCase {
     private static final String POINT_VERTEX_SRC = "shadow_map/point_vertex.glsl";
     private static final String POINT_FRAGMENT_SRC = "shadow_map/point_fragment.glsl";
 
+    private static final String BLUR_VERTEX_SRC = "shadow_map/blur_vertex.glsl";
+    private static final String BLUR_FRAGMENT_SRC = "shadow_map/blur_fragment.glsl";
+
     private CoordinateSystem coordinateSystem = new CoordinateSystem();
 
     @Override
@@ -58,10 +63,10 @@ public class ShadowTest extends TestCase {
 
     private class Renderer extends AbstractRenderer {
         VBO vbo, plane, light;
-        Program normalProgram, pointProgram, depthProgram, shadowMapProgram;
+        Program normalProgram, pointProgram, depthProgram, shadowMapProgram, blurProgram;
 
         FBO fbo;
-        FboTexture fboTexture;
+        FboTexture depthMap;
         Texture textureA, textureB;
 
         float angle = 45;
@@ -72,13 +77,19 @@ public class ShadowTest extends TestCase {
         float[] lightVectorInViewSpace = new float[4];
         GeometryData vboData, planeData;
         VBOGeometry.EasyBinder vboBinder, planeBinder;
-        CoordinateSystem.SimpleGlobal lightGlobal;
+        SimpleGlobal lightGlobal;
         private float[] lightModelMatrix = new float[16];
         private float[] lightMVPInLightSpace = new float[16];
         private float[] lightMVPInViewSpace = new float[16];
         private float[] vboModelMatrix = new float[16];
         private float[] vboMVPMatrix = new float[16];
         private float[] vboMVMatrix = new float[16];
+        private FboTexture bluredDepthMap;
+        private IndexedGeometryData blurGridData;
+        private VBO blurGrid;
+        private VBOGeometry.EasyBinder blurBinder;
+        private float[] blurMVPMatrix = new float[16];
+        private boolean blur;
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -96,6 +107,10 @@ public class ShadowTest extends TestCase {
             plane = new VBO(planeData.getVertexData());
             planeBinder = new VBOGeometry.EasyBinder(planeData.getFormatDescriptor());
 
+            blurGridData = createStripGridData(2.0f, 2.0f, 1, 1);
+            blurGrid = new VBO(blurGridData.getVertexData());
+            blurBinder = new VBOGeometry.EasyBinder(blurGridData.getFormatDescriptor());
+
             light = new VBO(
                     createPointData(lightPosInSelfSpace, WHITE, 10).getVertexData()
             );
@@ -107,7 +122,10 @@ public class ShadowTest extends TestCase {
                     LINEAR_REPEAT
             );
 
-            fboTexture = new FboTexture(768, 920);
+            depthMap = new FboTexture(768, 920);
+            depthMap.setDataStorage(GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT);
+
+            bluredDepthMap = new FboTexture(768, 920);
 
             fbo();
         }
@@ -119,11 +137,11 @@ public class ShadowTest extends TestCase {
             CoordinateSystem.Global global = CoordinateSystem.global();
 
             if (global == null) {
-                global = new CoordinateSystem.SimpleGlobal();
+                global = new SimpleGlobal();
                 CoordinateSystem.buildGlobal(global);
             }
 
-            CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
+            SimpleGlobal simpleGlobal = (SimpleGlobal) global;
 
             //simpleGlobal.eye(6);
             simpleGlobal.eye(
@@ -144,7 +162,7 @@ public class ShadowTest extends TestCase {
 //                    1.0f, 0, 0
 //            );
 
-            lightGlobal = new CoordinateSystem.SimpleGlobal();
+            lightGlobal = new SimpleGlobal();
 
             lightGlobal.perspective(45, aspect, 1f, 10);
 //            float bottom = 2.5f;
@@ -152,6 +170,14 @@ public class ShadowTest extends TestCase {
 //                    -aspect * bottom, aspect * bottom, -bottom, bottom,
 //                    0.1f, 10.0f
 //            );
+
+            SimpleGlobal blurGlobal = new SimpleGlobal();
+            blurGlobal.eye(1);
+            blurGlobal.ortho(
+                    -aspect, aspect, -1.0f, 1.0f,
+                    0.5f, 5
+            );
+            multiplyMM(blurMVPMatrix, 0, blurGlobal.projectMatrix(), 0, blurGlobal.viewMatrix(), 0);
         }
 
         @Override
@@ -160,11 +186,24 @@ public class ShadowTest extends TestCase {
 
             fbo.attach();
             depthProgram.attach();
-            glClear(GL_DEPTH_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_CULL_FACE);
+
+            glColorMask(false, false, false, false);
             drawDepth();
-            fbo.detach();
+
             glDisable(GL_CULL_FACE);
+            glColorMask(true, true, true, true);
+            glDepthMask(false);
+
+            if (blur) {
+                blurProgram.attach();
+                blurDepth();
+            }
+
+            glDepthMask(true);
+            fbo.detach();
+
             checkError();
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -191,6 +230,30 @@ public class ShadowTest extends TestCase {
 
         }
 
+        private void blurDepth() {
+            glActiveTexture(GL_TEXTURE0);
+            depthMap.attach();
+
+            blurGrid.attach();
+
+            VertexShader vsh = blurProgram.getVertexShader();
+
+            blurBinder.bind(null, vsh, null);
+
+            vsh.uploadUniform("u_MVPMatrix", blurMVPMatrix);
+
+            FragmentShader fsh = blurProgram.getFragmentShader();
+
+            fsh.uploadUniform("TexelSize", 768.0f, 920.f);
+            fsh.uploadUniform("Orientation", 0);
+            fsh.uploadUniform("BlurAmount", 3);
+
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, blurGridData.getFormatDescriptor().getCount());
+
+            blurGrid.detach();
+            depthMap.detach();
+        }
+
         private void drawPlaneWithoutShadow() {
             FragmentShader fragmentShader = normalProgram.getFragmentShader();
 
@@ -202,11 +265,11 @@ public class ShadowTest extends TestCase {
             );
 
             glActiveTexture(GL_TEXTURE0);
-            fboTexture.attach();
+            bluredDepthMap.attach();
 
             drawPanel(false);
 
-            fboTexture.detach();
+            bluredDepthMap.detach();
 
         }
 
@@ -277,13 +340,14 @@ public class ShadowTest extends TestCase {
             textureA.attach();
 
             glActiveTexture(GL_TEXTURE1);
-            fboTexture.attach();
+            Texture depthTexture = blur ? bluredDepthMap : depthMap;
+            depthTexture.attach();
 
             fragmentShader.uploadUniform("u_DepthMap", 1);
 
             drawPanel(true);
 
-            fboTexture.detach();
+            depthTexture.detach();
             textureA.detach();
         }
 
@@ -380,22 +444,42 @@ public class ShadowTest extends TestCase {
                     new FragmentShader(assetSting(SHADOW_MAP_FRAGMENT_SRC))
             );
             shadowMapProgram.link();
+
+
+            blurProgram = new Program();
+            blurProgram.attachShader(
+                    new VertexShader(assetSting(BLUR_VERTEX_SRC)),
+                    new FragmentShader(assetSting(BLUR_FRAGMENT_SRC))
+            );
+            blurProgram.link();
         }
 
         private void fbo() {
             fbo = new FBO();
             fbo.attach();
-            fboTexture.attach();
+            depthMap.attach();
             glFramebufferTexture2D(
                     GL_FRAMEBUFFER,
                     GL_DEPTH_ATTACHMENT,
                     GL_TEXTURE_2D,
-                    fboTexture.glRes(),
+                    depthMap.glRes(),
                     0
             );
+
+            bluredDepthMap.attach();
+
+            glFramebufferTexture2D(
+                    GL_FRAMEBUFFER,
+                    GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D,
+                    bluredDepthMap.glRes(),
+                    0
+            );
+
             checkFramebufferStatus();
 
             fbo.detach();
+            checkError();
         }
 
         private void drawDepth() {
