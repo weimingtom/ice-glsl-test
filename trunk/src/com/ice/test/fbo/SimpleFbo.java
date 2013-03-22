@@ -85,6 +85,7 @@ public class SimpleFbo extends TestCase {
             panle = new VBOGeometry(geometryData, vsh);
 
             fboTexture = new FboTexture(768, 920);
+            fboTexture.setDataStorage(GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT);
 
             panle.setTexture(fboTexture);
 
