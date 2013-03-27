@@ -305,7 +305,7 @@ public class ShadowTest extends TestCase {
                     0, 1, 0
             );
 
-//            double sqrt = Math.sqrt(eyeX * eyeX + eyeY * eyeY + eyeZ * eyeZ);
+//            double sqrt = MathUtil.sqrt(eyeX * eyeX + eyeY * eyeY + eyeZ * eyeZ);
 //            System.out.println("sqrt = " + sqrt);
 
             multiplyMM(lightMVPInLightSpace, 0, lightGlobal.projectMatrix(), 0, lightGlobal.viewMatrix(), 0);
