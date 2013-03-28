@@ -8,7 +8,9 @@ import android.view.WindowManager;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.FBO;
-import com.ice.graphics.geometry.*;
+import com.ice.graphics.geometry.CoordinateSystem;
+import com.ice.graphics.geometry.Geometry;
+import com.ice.graphics.geometry.IBOGeometry;
 import com.ice.graphics.shader.Program;
 import com.ice.graphics.texture.BitmapTexture;
 import com.ice.graphics.texture.FboTexture;
@@ -44,7 +46,6 @@ public class BlurTest extends TestCase {
         FBO fboA, fboB;
         private FboTexture fboTextureA;
         private BitmapTexture bitmapTexture;
-        private VBOGeometry panleScreen;
         private Geometry panleLarge;
         private FboTexture fboTextureB;
 
@@ -77,9 +78,6 @@ public class BlurTest extends TestCase {
                     program.getVertexShader()
             );
 
-            GeometryData geometryData = createStripGridData(1f, bitmap.getHeight() / (float) bitmap.getWidth(), 1, 1);
-            panleScreen = new VBOGeometry(geometryData, program.getVertexShader());
-
             bitmapTexture = new BitmapTexture(bitmap);
 
             fboA = new FBO();
@@ -93,8 +91,11 @@ public class BlurTest extends TestCase {
         protected void onChanged(int width, int height) {
             this.width = width;
             this.height = height;
-            fboWidth = Math.round(width / 2.0f);
-            fboHeight = Math.round(height / 2.0f);
+
+            //fboWidth = Math.round(width / 2.0f);
+            //fboHeight = Math.round(height / 2.0f);
+            fboWidth = width;
+            fboHeight = height;
 
             fboTextures();
 
@@ -124,6 +125,12 @@ public class BlurTest extends TestCase {
             fboTextureA.prepare();
             fboA.attach();
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTextureA.glRes(), 0);
+
+            FboTexture texture = new FboTexture(fboWidth, fboHeight);
+            texture.setDataStorage(GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT);
+            texture.prepare();
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture.glRes(), 0);
+
             fboA.detach();
 
 
@@ -132,8 +139,8 @@ public class BlurTest extends TestCase {
             }
 
             fboTextureB = new FboTexture(fboWidth, fboHeight);
-            fboTextureB.prepare();
             fboB.attach();
+            fboTextureB.prepare();
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTextureB.glRes(), 0);
             fboB.detach();
         }
@@ -152,13 +159,15 @@ public class BlurTest extends TestCase {
         }
 
         private void showBlurResult() {
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glViewport(0, 0, width, height);
 
-            fboTextureA.attach();
+            program.attach();
+            bitmapTexture.attach();
+            //fboTextureA.attach();
 
             panleLarge.attach();
-            program.attach();
+
             program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
             panleLarge.draw();
             panleLarge.detach();
@@ -170,7 +179,7 @@ public class BlurTest extends TestCase {
 
         private void renderToTexture() {
             fboA.attach();
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glViewport(0, 0, fboWidth, fboHeight);
 
             program.attach();
@@ -181,6 +190,8 @@ public class BlurTest extends TestCase {
             program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
             panle.draw();
             panle.detach();
+
+            bitmapTexture.detach();
 
             fboA.detach();
         }
