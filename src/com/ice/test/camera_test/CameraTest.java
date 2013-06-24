@@ -4,8 +4,6 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
-import android.os.SystemClock;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.geometry.*;
@@ -33,15 +31,15 @@ public class CameraTest extends TestCase {
     private static final String VERTEX_SRC = "camera_preview/vertex.glsl";
     private static final String FRAGMENT_SRC = "camera_preview/fragment.glsl";
 
-    private Camera mCamera;
-    private SurfaceTexture surface;
     private Texture previewTexture;
+    private SurfaceTexture surfaceTexture;
+    private CameraProxy camera;
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        mCamera.release();
+        camera.release();
     }
 
     @Override
@@ -50,21 +48,42 @@ public class CameraTest extends TestCase {
     }
 
     private void startCamera(int texture) {
-        surface = new SurfaceTexture(texture);
+        surfaceTexture = new SurfaceTexture(texture);
 
-        mCamera = Camera.open();
+        camera = buildCamera();
+        camera.startPreview();
+    }
+
+    private CameraProxy buildCamera() {
+        Cameras cameras = Cameras.getInstance();
+        CameraFace face = CameraFace.Back;
+        int id = cameras.getCameraId(face);
+        Camera.CameraInfo cameraInfo = cameras.getCameraInfo(face);
+
+        Camera opened = Camera.open(id);
 
         try {
-            Camera.Parameters parameters = mCamera.getParameters();
+            Camera.Parameters parameters = opened.getParameters();
             parameters.setPreviewSize(1024, 768);
-            surface.setDefaultBufferSize(1024, 768);
-            mCamera.setParameters(parameters);
+            surfaceTexture.setDefaultBufferSize(1024, 768);
+            opened.setParameters(parameters);
 
-            mCamera.setPreviewTexture(surface);
-            mCamera.startPreview();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
+            opened.setPreviewTexture(surfaceTexture);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        CameraProxy camera = new CameraProxy(id, opened, cameraInfo);
+
+        int displayOrientation =
+                CameraHelper.rightDisplayOrientation(this, cameraInfo);
+
+        camera.setDisplayOrientation(displayOrientation);
+
+        CameraHelper.init(this, opened, 1.0);
+
+        return camera;
     }
 
     private class Renderer extends AbstractRenderer {
@@ -75,7 +94,6 @@ public class CameraTest extends TestCase {
         protected void onCreated(EGLConfig config) {
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-            glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
 
             VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
@@ -89,7 +107,7 @@ public class CameraTest extends TestCase {
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
+            IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(2, 2, 1, 1);
             indexedGeometryData.getFormatDescriptor().namespace(nameMap);
             panel = new IBOGeometry(indexedGeometryData, vsh);
 
@@ -115,18 +133,10 @@ public class CameraTest extends TestCase {
             }
 
             CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
-            simpleGlobal.eye(6);
-            simpleGlobal.perspective(45, width / (float) height, 1, 10);
 
-
-            float[] viewMatrix = simpleGlobal.viewMatrix();
-
-            Matrix.rotateM(
-                    viewMatrix, 0,
-                    -60,
-                    1.0f, 0, 0
-            );
-
+            float left = -1.0f * 1.5f;
+            float top = -left * height / (float) width;
+            simpleGlobal.ortho(left, -left, -top, top, 0, 10);
 
             startCamera(previewTexture.glRes());
         }
@@ -136,9 +146,8 @@ public class CameraTest extends TestCase {
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
             panel.attach();
-            surface.updateTexImage();
+            surfaceTexture.updateTexImage();
 
-            animation(panel);
             updateMVPMatrix(panel);
 
             panel.draw();
@@ -152,23 +161,6 @@ public class CameraTest extends TestCase {
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
             program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
-        }
-
-        private void animation(Geometry geometry) {
-            // Do a complete rotation every 10 seconds.
-            long time = SystemClock.uptimeMillis() % 10000L;
-            float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
-
-            float[] modelMatrix = geometry.selfCoordinateSystem();
-
-            Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0f, 0f, 1.0f
-            );
-            updateMVPMatrix(geometry);
-            geometry.draw();
         }
 
     }
