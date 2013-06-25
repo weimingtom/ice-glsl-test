@@ -2,6 +2,7 @@ package com.ice.test.camera_test;
 
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.opengl.GLES20;
@@ -38,10 +39,10 @@ public class CameraTest extends TestCase {
     private SurfaceTexture surfaceTexture;
     private CameraProxy camera;
 
-    private PointF displaySize = new PointF(2.0f, 1.0f);
+    private PointF displaySize = new PointF(2.0f, 2.0f);
     private Rect cameraPreviewBounds = new Rect(0, 0, 1024, 768);
 
-    private float[] textureScaleVect = new float[2];
+    private float[] textureCrop;
 
     @Override
     protected void onPause() {
@@ -51,7 +52,7 @@ public class CameraTest extends TestCase {
 
     }
 
-    private void updateTextureVec() {
+    private void calTextureCrop() {
         PointF srcTextureSize = new PointF();
 
         float displayAspect = displaySize.y / displaySize.x;
@@ -65,8 +66,21 @@ public class CameraTest extends TestCase {
             srcTextureSize.y = srcTextureSize.x * displayAspect;
         }
 
-        textureScaleVect[0] = srcTextureSize.x / cameraPreviewBounds.width();
-        textureScaleVect[1] = srcTextureSize.y / cameraPreviewBounds.height();
+        RectF cropBounds = new RectF(0, 0, srcTextureSize.x, srcTextureSize.y);
+        cropBounds.offset(
+                (cameraPreviewBounds.width() - cropBounds.width()) / 2,
+                (cameraPreviewBounds.height() - cropBounds.height()) / 2
+        );
+
+        textureCrop = new float[4];
+        textureCrop[0] = cropBounds.left / cameraPreviewBounds.width();
+        textureCrop[1] = cropBounds.right / cameraPreviewBounds.width();
+        textureCrop[2] = cropBounds.top / cameraPreviewBounds.height();
+        textureCrop[3] = cropBounds.bottom / cameraPreviewBounds.height();
+
+        for (float v : textureCrop) {
+            System.out.println("textureCrop " + v);
+        }
     }
 
     @Override
@@ -179,7 +193,9 @@ public class CameraTest extends TestCase {
             surfaceTexture.updateTexImage();
             surfaceTexture.getTransformMatrix(textureMatrix);
 
-            updateTextureVec();
+            if (textureCrop == null) {
+                calTextureCrop();
+            }
 
             updateShaderParams();
 
@@ -193,10 +209,9 @@ public class CameraTest extends TestCase {
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
-            program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
-
-            FragmentShader fsh = program.getFragmentShader();
-            fsh.uploadUniform("u_TextureScale", textureScaleVect);
+            VertexShader vsh = program.getVertexShader();
+            vsh.uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+            vsh.uploadUniform("u_TextureCrop", textureCrop);
         }
 
     }
