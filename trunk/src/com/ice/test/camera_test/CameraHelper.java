@@ -13,6 +13,8 @@ import android.view.WindowManager;
 
 import java.util.List;
 
+import static android.hardware.Camera.CameraInfo;
+
 /**
  * User: jason
  */
@@ -26,12 +28,12 @@ public class CameraHelper {
     public static final String TRUE = "true";
     private static final String TAG = "CameraHelper";
 
-    public static int getJpegRotation(Camera.CameraInfo info, int displayOrientation) {
+    public static int getJpegRotation(CameraInfo info, int displayOrientation) {
         // See android.hardware.Camera.Parameters.setRotation for
         // documentation.
         int rotation = 0;
         if (displayOrientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
                 rotation = (info.orientation - displayOrientation + 360) % 360;
             } else {  // back-facing camera
                 rotation = (info.orientation + displayOrientation) % 360;
@@ -40,7 +42,7 @@ public class CameraHelper {
         return rotation;
     }
 
-    public static int rightDisplayOrientation(Context context, Camera.CameraInfo info) {
+    public static int rightDisplayOrientation(Context context, CameraInfo info) {
 
         WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
@@ -63,7 +65,7 @@ public class CameraHelper {
         }
 
         int result;
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
             result = (360 - result) % 360;  // compensate the mirror
         } else {  // back-facing
@@ -161,6 +163,40 @@ public class CameraHelper {
         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
     }
 
+    public static void setCameraDisplayOrientation(Context context, int cameraId, android.hardware.Camera camera) {
+        CameraInfo info = new CameraInfo();
+        android.hardware.Camera.getCameraInfo(cameraId, info);
+
+        WindowManager windowManager =
+                (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        int rotation = windowManager.getDefaultDisplay().getRotation();
+
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+
+        int result;
+        if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
+    }
+
     public static void init(Context context, Camera camera, double targetRatio) {
 
         Camera.Parameters parameters = camera.getParameters();
@@ -174,21 +210,7 @@ public class CameraHelper {
         }
         Log.d(TAG, "auto focus enabled ? " + autoFocusSupported);
 
-        Log.d(TAG, "targetRatio " + targetRatio);
-        // Set a preview size that is closest to the viewfinder height and has
-        // the right aspect ratio.
-        List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
-
-        for (Camera.Size size : sizes) {
-            Log.d(TAG, "Size " + size.width + ":" + size.height + "," + size.width / (float) size.height);
-        }
-
-        Camera.Size optimalSize = CameraHelper.getOptimalPreviewSize(context, sizes, targetRatio);
-        Camera.Size original = parameters.getPreviewSize();
-        if (!original.equals(optimalSize)) {
-            parameters.setPreviewSize(optimalSize.width, optimalSize.height);
-        }
-        Log.d(TAG, "Preview size is " + optimalSize.width + "x" + optimalSize.height);
+        camera.setParameters(parameters);
     }
 
     public static boolean isSupported(String value, List<String> supported) {
