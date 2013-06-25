@@ -1,9 +1,12 @@
 package com.ice.test.camera_test;
 
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import com.ice.engine.AbstractRenderer;
 import com.ice.engine.TestCase;
 import com.ice.graphics.geometry.*;
@@ -35,11 +38,35 @@ public class CameraTest extends TestCase {
     private SurfaceTexture surfaceTexture;
     private CameraProxy camera;
 
+    private PointF displaySize = new PointF(2.0f, 1.0f);
+    private Rect cameraPreviewBounds = new Rect(0, 0, 1024, 768);
+
+    private float[] textureScaleVect = new float[2];
+
     @Override
     protected void onPause() {
         super.onPause();
 
         camera.release();
+
+    }
+
+    private void updateTextureVec() {
+        PointF srcTextureSize = new PointF();
+
+        float displayAspect = displaySize.y / displaySize.x;
+        float previewAspect = cameraPreviewBounds.height() / (float) cameraPreviewBounds.width();
+
+        if (displayAspect > previewAspect) {
+            srcTextureSize.y = cameraPreviewBounds.height();
+            srcTextureSize.x = srcTextureSize.y / displayAspect;
+        } else {
+            srcTextureSize.x = cameraPreviewBounds.width();
+            srcTextureSize.y = srcTextureSize.x * displayAspect;
+        }
+
+        textureScaleVect[0] = srcTextureSize.x / cameraPreviewBounds.width();
+        textureScaleVect[1] = srcTextureSize.y / cameraPreviewBounds.height();
     }
 
     @Override
@@ -64,8 +91,7 @@ public class CameraTest extends TestCase {
 
         try {
             Camera.Parameters parameters = opened.getParameters();
-            parameters.setPreviewSize(1024, 768);
-            surfaceTexture.setDefaultBufferSize(1024, 768);
+            parameters.setPreviewSize(cameraPreviewBounds.width(), cameraPreviewBounds.height());
             opened.setParameters(parameters);
 
             opened.setPreviewTexture(surfaceTexture);
@@ -76,10 +102,8 @@ public class CameraTest extends TestCase {
 
         CameraProxy camera = new CameraProxy(id, opened, cameraInfo);
 
-        int displayOrientation =
-                CameraHelper.rightDisplayOrientation(this, cameraInfo);
-
-        camera.setDisplayOrientation(displayOrientation);
+        //opened.setDisplayOrientation(90);
+        //CameraHelper.setCameraDisplayOrientation(this, id, opened);
 
         CameraHelper.init(this, opened, 1.0);
 
@@ -89,6 +113,7 @@ public class CameraTest extends TestCase {
     private class Renderer extends AbstractRenderer {
         Program program;
         Geometry panel;
+        private float[] textureMatrix = new float[16];
 
         @Override
         protected void onCreated(EGLConfig config) {
@@ -107,7 +132,8 @@ public class CameraTest extends TestCase {
             nameMap.put(ShaderBinder.POSITION, "a_Position");
             nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(2, 2, 1, 1);
+            IndexedGeometryData indexedGeometryData =
+                    GeometryDataFactory.createStripGridData(displaySize.x, displaySize.y, 1, 1);
             indexedGeometryData.getFormatDescriptor().namespace(nameMap);
             panel = new IBOGeometry(indexedGeometryData, vsh);
 
@@ -119,6 +145,10 @@ public class CameraTest extends TestCase {
             previewTexture.prepare();
 
             panel.setTexture(previewTexture);
+
+            CoordinateSystem coordinateSystem = panel.getCoordinateSystem();
+            float[] matrix = coordinateSystem.modelMatrix();
+            Matrix.rotateM(matrix, 0, -90, 0, 0, 1);
         }
 
         @Override
@@ -147,20 +177,26 @@ public class CameraTest extends TestCase {
 
             panel.attach();
             surfaceTexture.updateTexImage();
+            surfaceTexture.getTransformMatrix(textureMatrix);
 
-            updateMVPMatrix(panel);
+            updateTextureVec();
+
+            updateShaderParams();
 
             panel.draw();
 
             panel.detach();
         }
 
-        private void updateMVPMatrix(Geometry geometry) {
-            CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
+        private void updateShaderParams() {
+            CoordinateSystem coordinateSystem = panel.getCoordinateSystem();
 
             coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
             program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+
+            FragmentShader fsh = program.getFragmentShader();
+            fsh.uploadUniform("u_TextureScale", textureScaleVect);
         }
 
     }
