@@ -112,6 +112,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".texture_view_opengl_test.TextureViewTest">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.ICE"/>
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>
