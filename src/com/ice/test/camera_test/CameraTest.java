@@ -39,7 +39,7 @@ public class CameraTest extends TestCase {
     private SurfaceTexture surfaceTexture;
     private CameraProxy camera;
 
-    private PointF displaySize = new PointF(2.0f, 2.0f);
+    private PointF displaySize = new PointF(2.0f,1.0f);
     private Rect cameraPreviewBounds = new Rect(0, 0, 1024, 768);
 
     private float[] textureCrop;

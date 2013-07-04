@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Opengl es 2.0 Test</string>
+    <string name="texture_view_hint">hello texture view with opengl!</string>
 </resources>
