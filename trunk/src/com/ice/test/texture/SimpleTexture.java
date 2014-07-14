@@ -21,192 +21,205 @@ import java.util.Map;
 import static android.opengl.GLES20.*;
 import static com.ice.engine.Res.*;
 import static com.ice.graphics.geometry.CoordinateSystem.M_V_P_MATRIX;
-import static com.ice.graphics.texture.Texture.Params.LINEAR_REPEAT;
+import static com.ice.graphics.texture.Texture.Params.LINEAR_CLAMP_TO_EDGE;
 
 /**
  * User: Jason
  * Date: 13-2-12
  */
-public class SimpleTexture extends TestCase {
-    private static final String VERTEX_SRC = "texture/vertex.glsl";
-    private static final String FRAGMENT_SRC = "texture/fragment.glsl";
+public class SimpleTexture extends TestCase
+{
+	private static final String VERTEX_SRC   = "texture/vertex.glsl";
+	private static final String FRAGMENT_SRC = "texture/fragment.glsl";
 
-    @Override
-    protected GLSurfaceView.Renderer buildRenderer() {
-        return new Renderer();
-    }
+	@Override
+	protected GLSurfaceView.Renderer buildRenderer ()
+	{
+		return new Renderer();
+	}
 
-    private class Renderer extends AbstractRenderer {
-        Program program;
-        Geometry panle;
-        Geometry geometryA;
-        Geometry geometryB;
+	private class Renderer extends AbstractRenderer
+	{
+		Program  program;
+		Geometry panle;
+		Geometry geometryA;
+		Geometry geometryB;
 
-        @Override
-        protected void onCreated(EGLConfig config) {
-            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		@Override
+		protected void onCreated (EGLConfig config)
+		{
+			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-            glEnable(GL_DEPTH_TEST);
-            glEnable(GL_CULL_FACE);
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_CULL_FACE);
 
-            VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
-            FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
+			VertexShader vsh = new VertexShader(assetSting(VERTEX_SRC));
+			FragmentShader fsh = new FragmentShader(assetSting(FRAGMENT_SRC));
 
-            program = new Program();
-            program.attachShader(vsh, fsh);
-            program.link();
+			program = new Program();
+			program.attachShader(vsh, fsh);
+			program.link();
 
-            Map<String, String> nameMap = new HashMap<String, String>();
-            nameMap.put(ShaderBinder.POSITION, "a_Position");
-            nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
+			Map<String, String> nameMap = new HashMap<String, String>();
+			nameMap.put(ShaderBinder.POSITION, "a_Position");
+			nameMap.put(ShaderBinder.TEXTURE_COORD, "a_TexCoordinate");
 
-            GeometryData geometryData = GeometryDataFactory.createCubeData(1);
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            geometryA = new VBOGeometry(geometryData, vsh);
-            geometryA.setTexture(
-                    new BitmapTexture(bitmap(R.drawable.freshfruit2))
-            );
+			GeometryData geometryData = GeometryDataFactory.createCubeData(1);
+			geometryData.getFormatDescriptor().namespace(nameMap);
+			geometryA = new VBOGeometry(geometryData, vsh);
+			geometryA.setTexture(
+					new BitmapTexture(bitmap(R.drawable.freshfruit2))
+			);
 
-            geometryData = ObjLoader.loadObj(openRaw(R.raw.teaport));
-            geometryData.getFormatDescriptor().namespace(nameMap);
-            geometryB = new VBOGeometry(geometryData, vsh);
-            Bitmap bitmap = bitmap(R.drawable.mask1);
-            geometryB.setTexture(
-                    new BitmapTexture(bitmap, LINEAR_REPEAT)
-            );
+			geometryData = ObjLoader.loadObj(openRaw(R.raw.annie));
+			geometryData.getFormatDescriptor().namespace(nameMap);
+			geometryB = new VBOGeometry(geometryData, vsh);
+			Bitmap bitmap = bitmap(R.drawable.annie);
+			geometryB.setTexture(
+					new BitmapTexture(bitmap, LINEAR_CLAMP_TO_EDGE)
+			);
 
-            IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
-            indexedGeometryData.getFormatDescriptor().namespace(nameMap);
-            panle = new IBOGeometry(indexedGeometryData, vsh);
-            panle.setTexture(
-                    new BitmapTexture(bitmap(R.drawable.poker_back))
-            );
-        }
+			IndexedGeometryData indexedGeometryData = GeometryDataFactory.createStripGridData(5, 5, 1, 1);
+			indexedGeometryData.getFormatDescriptor().namespace(nameMap);
+			panle = new IBOGeometry(indexedGeometryData, vsh);
+			panle.setTexture(
+					new BitmapTexture(bitmap(R.drawable.poker_back))
+			);
+		}
 
-        @Override
-        protected void onChanged(int width, int height) {
-            glViewport(0, 0, width, height);
+		@Override
+		protected void onChanged (int width, int height)
+		{
+			glViewport(0, 0, width, height);
 
-            CoordinateSystem.Global global = CoordinateSystem.global();
+			CoordinateSystem.Global global = CoordinateSystem.global();
 
-            if (global == null) {
-                global = new CoordinateSystem.SimpleGlobal();
-                CoordinateSystem.buildGlobal(global);
-            }
+			if (global == null)
+			{
+				global = new CoordinateSystem.SimpleGlobal();
+				CoordinateSystem.buildGlobal(global);
+			}
 
-            CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
-            simpleGlobal.eye(6);
-            simpleGlobal.perspective(45, width / (float) height, 1, 10);
+			CoordinateSystem.SimpleGlobal simpleGlobal = (CoordinateSystem.SimpleGlobal) global;
+			simpleGlobal.eye(8);
+			simpleGlobal.perspective(45, width / (float) height, 1, 10);
+
+			float[] viewMatrix = simpleGlobal.viewMatrix();
+
+			Matrix.rotateM(
+					viewMatrix, 0,
+					-60,
+					1.0f, 0, 0
+			);
+		}
 
 
-            float[] viewMatrix = simpleGlobal.viewMatrix();
+		@Override
+		protected void onFrame ()
+		{
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            Matrix.rotateM(
-                    viewMatrix, 0,
-                    -60,
-                    1.0f, 0, 0
-            );
-        }
+			// Do a complete rotation every 10 seconds.
+			long time = System.currentTimeMillis() % 10000L;
+			float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
+//			geometryA.attach();
+//			styleA(angleInDegrees, geometryA);
+//			styleB(angleInDegrees, geometryA);
+//			geometryA.detach();
 
-        @Override
-        protected void onFrame() {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			geometryB.attach();
+			styleC(angleInDegrees, geometryB);
+			geometryB.detach();
 
-            // Do a complete rotation every 10 seconds.
-            long time = System.currentTimeMillis() % 10000L;
-            float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
+			drawPanel();
+		}
 
-            geometryA.attach();
-            styleA(angleInDegrees, geometryA);
-            styleB(angleInDegrees, geometryA);
-            geometryA.detach();
+		private void drawPanel ()
+		{
+			panle.attach();
 
-            geometryB.attach();
-            styleC(angleInDegrees, geometryB);
-            geometryB.detach();
+			updateMVPMatrix(panle);
 
-            drawPanel();
-        }
+			panle.draw();
 
-        private void drawPanel() {
-            panle.attach();
+			panle.detach();
+		}
 
-            updateMVPMatrix(panle);
+		private void styleA (float angleInDegrees, Geometry geometry)
+		{
+			float[] modelMatrix = geometry.selfCoordinateSystem();
 
-            panle.draw();
+			Matrix.setIdentityM(modelMatrix, 0);
+			Matrix.translateM(
+					modelMatrix, 0,
+					0, 0, 0.5f
+			);
+			Matrix.rotateM(
+					modelMatrix, 0,
+					angleInDegrees,
+					0f, 0f, 1.0f
+			);
+			updateMVPMatrix(geometry);
+			geometry.draw();
+		}
 
-            panle.detach();
-        }
+		private void styleB (float angleInDegrees, Geometry geometry)
+		{
+			float[] modelMatrix = geometry.selfCoordinateSystem();
 
-        private void styleA(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+			Matrix.setIdentityM(modelMatrix, 0);
+			Matrix.translateM(modelMatrix, 0, 1.5f, -1, 0);
+			Matrix.rotateM(
+					modelMatrix, 0,
+					angleInDegrees,
+					0f, 0f, 1.0f
+			);
+			updateMVPMatrix(geometry);
+			geometry.draw();
+		}
 
-            Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.translateM(
-                    modelMatrix, 0,
-                    0, 0, 0.5f
-            );
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0f, 0f, 1.0f
-            );
-            updateMVPMatrix(geometry);
-            geometry.draw();
-        }
+		private void styleC (float angleInDegrees, Geometry geometry)
+		{
+			float[] modelMatrix = geometry.selfCoordinateSystem();
 
-        private void styleB(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+			Matrix.setIdentityM(modelMatrix, 0);
 
-            Matrix.setIdentityM(modelMatrix, 0);
-            Matrix.translateM(modelMatrix, 0, 1.5f, -1, 0);
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0f, 0f, 1.0f
-            );
-            updateMVPMatrix(geometry);
-            geometry.draw();
-        }
+			Matrix.scaleM(modelMatrix, 0, 0.02f, 0.02f, 0.02f);
 
-        private void styleC(float angleInDegrees, Geometry geometry) {
-            float[] modelMatrix = geometry.selfCoordinateSystem();
+			Matrix.rotateM(
+					modelMatrix, 0,
+					90,
+					1, 0f, 0
+			);
 
-            Matrix.setIdentityM(modelMatrix, 0);
+			Matrix.rotateM(
+					modelMatrix, 0,
+					angleInDegrees,
+					0, 1.0f, 0
+			);
 
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    90,
-                    1, 0f, 0
-            );
+			Matrix.translateM(modelMatrix, 0, 1.5f, 0, 0);
 
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0, 1.0f, 0
-            );
+			Matrix.rotateM(
+					modelMatrix, 0,
+					angleInDegrees,
+					0, 1, 0
+			);
 
-            Matrix.translateM(modelMatrix, 0, 1.5f, 0, 0);
+			updateMVPMatrix(geometry);
+			geometry.draw();
+		}
 
-            Matrix.rotateM(
-                    modelMatrix, 0,
-                    angleInDegrees,
-                    0, 1, 0
-            );
+		private void updateMVPMatrix (Geometry geometry)
+		{
+			CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
 
-            updateMVPMatrix(geometry);
-            geometry.draw();
-        }
+			coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
 
-        private void updateMVPMatrix(Geometry geometry) {
-            CoordinateSystem coordinateSystem = geometry.getCoordinateSystem();
+			program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
+		}
 
-            coordinateSystem.modelViewProjectMatrix(M_V_P_MATRIX);
-
-            program.getVertexShader().uploadUniform("u_MVPMatrix", M_V_P_MATRIX);
-        }
-
-    }
+	}
 
 }
